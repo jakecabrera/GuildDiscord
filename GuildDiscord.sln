@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "GuildDiscord", "GuildDiscord\GuildDiscord.pyproj", "{14C03955-F897-402F-82D5-5AEDB5F71D36}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{14C03955-F897-402F-82D5-5AEDB5F71D36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14C03955-F897-402F-82D5-5AEDB5F71D36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EFE93898-5CBB-4743-9EB6-F7183D3EF200}
+	EndGlobalSection
+EndGlobal

@@ -12,12 +12,17 @@ ref = db.reference('Guild')
 prefix = '&'
 
 okToRun = False
+officerChannel = "486235037818290187"
 
 # Roles that are allowed to talk with my bot
 authorizedRoles = {
     "513372116519878716",
-    "474235266190540800",
-    "474234873763201026"
+    "474235266190540800", # Risen Probably senpai notice me
+    "474234873763201026" # Risen Probably officer
+    }
+
+authorizedChannels = {
+    "486235037818290187" # Officer
     }
 
 sarge = "247195865989513217" # That's me!!! o/
@@ -32,21 +37,21 @@ async def on_message(message):
     global okToRun
 
     # Return if the message is from unauthorized user
-    if message.author == client.user or not validUser(message.author):
+    if message.author == client.user or not validUser(message.author) or message.channel.id != officerChannel:
         return
 
     m = message.content.upper()
 
     # Set State
-    if message.author.id == sarge and m.startswith(prefix + "STATE"):
+    if message.author.id == sarge and m.startswith(prefix + "STATE") and message.channel.id == officerChannel:
         args = m.split(" ")
         if args[1] == 'STOP' or args[1] == 'PAUSE':
             okToRun = False
-            await client.send_message(message.channel, cssMessage("Commands are no longer available"))
+            await client.send_message(officerChannel, cssMessage("Commands are no longer available"))
             await client.change_presence(game=discord.Game(name="Unavailable"))
         elif args[1] == 'CONTINUE' or args[1] == 'START':
             okToRun = True
-            await client.send_message(message.channel, cssMessage("Commands are now available"))
+            await client.send_message(officerChannel, cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
 
     # Check if it's okay to run commands
@@ -54,7 +59,7 @@ async def on_message(message):
         return
 
     # Mission Commands
-    if m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS"):
+    if (m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS")) and message.channel.id == officerChannel:
         args = m.split(" ")
         if args[1] == 'FINISH':
             finishMission()

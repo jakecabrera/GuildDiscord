@@ -12,17 +12,13 @@ ref = db.reference('Guild')
 prefix = '&'
 
 okToRun = False
-officerChannel = "486235037818290187"
+opsChannel = "517203484467134484"
 
 # Roles that are allowed to talk with my bot
 authorizedRoles = {
-    "513372116519878716",
+    "513372116519878716", # Role from my test server
     "474235266190540800", # Risen Probably senpai notice me
     "474234873763201026" # Risen Probably officer
-    }
-
-authorizedChannels = {
-    "486235037818290187" # Officer
     }
 
 sarge = "247195865989513217" # That's me!!! o/
@@ -37,21 +33,21 @@ async def on_message(message):
     global okToRun
 
     # Return if the message is from unauthorized user
-    if message.author == client.user or not validUser(message.author) or message.channel.id != officerChannel:
+    if message.author == client.user or not validUser(message.author) or message.channel.id != opsChannel:
         return
 
     m = message.content.upper()
 
     # Set State
-    if message.author.id == sarge and m.startswith(prefix + "STATE") and message.channel.id == officerChannel:
+    if message.author.id == sarge and m.startswith(prefix + "STATE") and message.channel.id == opsChannel:
         args = m.split(" ")
         if args[1] == 'STOP' or args[1] == 'PAUSE':
             okToRun = False
-            await client.send_message(officerChannel, cssMessage("Commands are no longer available"))
+            await client.send_message(client.get_channel(opsChannel), cssMessage("Commands are no longer available"))
             await client.change_presence(game=discord.Game(name="Unavailable"))
         elif args[1] == 'CONTINUE' or args[1] == 'START':
             okToRun = True
-            await client.send_message(officerChannel, cssMessage("Commands are now available"))
+            await client.send_message(client.get_channel(opsChannel), cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
 
     # Check if it's okay to run commands
@@ -59,11 +55,16 @@ async def on_message(message):
         return
 
     # Mission Commands
-    if (m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS")) and message.channel.id == officerChannel:
+    if (m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS")) and message.channel.id == opsChannel:    
+        botOnline = ref.child('BotCommands').child('Online').get()
+        if not botOnline:
+            await client.send_message(client.get_channel(opsChannel), cssMessage("The bot responsible for handling this request is not online right now."))
+            return
+
         args = m.split(" ")
         if args[1] == 'FINISH':
             finishMission()
-        elif args[1] == 'START':
+        elif args[1] == 'START': # doesn't really do anything yet
             startMission()
 
     # Ping Pong
@@ -78,12 +79,13 @@ def validUser(user):
     return False
 
 # Sends a signal to voice attack to turn in the mission
-def finishMission():
+async def finishMission():
     alreadyQueued = ref.child('BotCommands').child('FinishMission').get()
+
     if alreadyQueued:
-        cssMessage("Already working on it!")
+        await client.send_message(client.get_channel(opsChannel), cssMessage("Already working on it!"))
     else:
-        cssMessage("You got it! Finishing mission...")
+        await client.send_message(client.get_channel(opsChannel), cssMessage("You got it! Finishing mission..."))
         ref.child('BotCommands').update({'FinishMission':True})
 
 # Resets mission to false

@@ -46,7 +46,7 @@ async def on_message(message):
     discordNamePattern = re.compile(r'.*#\d{4}')
     bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
     addPattern = re.compile(r'<ADDED>.*\[.*\]')
-
+    
     # Set State
     if message.author.id == sarge and m.startswith(prefix + "STATE") and message.channel.id in authorizedChannels:
         args = m.split(" ")
@@ -76,6 +76,10 @@ async def on_message(message):
     elif m.startswith(prefix + "PING"):
         await client.send_message(message.channel, "pong!")
 
+    # Help!
+    elif m.startswith(prefix + "HELP"):
+        await showHelp(message.channel)
+
     # Guildie Tracker
     # Check if adding guildie
     if len(addPattern.findall(m)) > 0:
@@ -85,9 +89,7 @@ async def on_message(message):
         for x in b:
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
-            print("x: " + x)
             bName = bdoNamePattern.search(x).group()
-            print(bName)
             await addGuildie(dName, bName)
 
     # Check if removing guildie
@@ -98,9 +100,7 @@ async def on_message(message):
         for x in b:
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
-            print("x: " + x)
             bName = bdoNamePattern.search(x).group()
-            print(bName)
             await removeGuildie(dName, bName)
 
     # Check if searching for guildies
@@ -133,6 +133,25 @@ async def finishMission(channel):
 def startMission():
     ref.child('BotCommands').update({'FinishMission':False})
 
+# Display help info
+async def showHelp(ch):
+    helpMessage = (
+        "HELP WINDOW :dab:\n\n" +
+        "# Guild Member Searching:\n" +
+        "# To search by a guild members discord name use:\n" +
+        "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
+        "# To search by a guild members bdo family name use:\n" +
+        "\t[" + prefix + "guild search family <USER_NAME_GOES_HERE>]"
+    )
+    if ch.id in authorizedChannels:
+        helpMessage += (
+            "\n\nSUPER SECRET OFFICER ONLY COMMANDS :dab::dab::dab:\n\n" +
+            "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
+            "\t[" + prefix + "mission finish]"
+            )
+    await client.send_message(ch, cssMessage(helpMessage))
+    return
+
 # Adds an entry to the database
 async def addGuildie(dName, bName):
     member = ref.child('Members').push()
@@ -154,13 +173,12 @@ async def getGuildieByDiscord(dName, ch):
     rawDName = dName.split("#")[0]
     for member in members:
         m = members[member]['Discord'].split("#")[0]
-        print(m)
         if m.upper() == rawDName.upper():
             await client.send_message(ch, cssMessage("[" + members[member]['Discord'] + "] = [" + members[member]['Family'] + "]"))
             return
     await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
 
-# Searches for a guildi's discord name by its bdo family name
+# Searches for a guildie's discord name by its bdo family name
 async def getGuildieByFamily(bName, ch):
     members = ref.child('Members').get()
     for member in members:

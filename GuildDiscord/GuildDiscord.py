@@ -19,6 +19,11 @@ authorizedChannels = {
     "517203484467134484" # ops channel
     }
 
+databaseChannels = {
+    "474242123143577610", # Add-and-remove
+    "259049604627169291" # Private test channel
+    }
+
 authorizedRoles = {
     "513372116519878716", # Role from my test server
     "474235266190540800", # Risen Probably senpai notice me
@@ -82,7 +87,7 @@ async def on_message(message):
 
     # Guildie Tracker
     # Check if adding guildie
-    if len(addPattern.findall(m)) > 0:
+    if len(addPattern.findall(m)) > 0 and message.channel.id in databaseChannels:
         a = addPattern.findall(message.content)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -93,7 +98,7 @@ async def on_message(message):
             await addGuildie(dName, bName)
 
     # Check if removing guildie
-    if len(removePattern.findall(m)) > 0:
+    if len(removePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
         a = removePattern.findall(message.content)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -136,7 +141,7 @@ def startMission():
 # Display help info
 async def showHelp(ch):
     helpMessage = (
-        "HELP WINDOW :dab:\n\n" +
+        "HELP WINDOW\n\n" +
         "# Guild Member Searching:\n" +
         "# To search by a guild members discord name use:\n" +
         "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
@@ -145,7 +150,7 @@ async def showHelp(ch):
     )
     if ch.id in authorizedChannels:
         helpMessage += (
-            "\n\nSUPER SECRET OFFICER ONLY COMMANDS :dab::dab::dab:\n\n" +
+            "\n\nSUPER SECRET OFFICER ONLY COMMANDS\n\n" +
             "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
             "\t[" + prefix + "mission finish]"
             )
@@ -154,6 +159,7 @@ async def showHelp(ch):
 
 # Adds an entry to the database
 async def addGuildie(dName, bName):
+    dName = dName.replace('@', '')
     member = ref.child('Members').push()
     member.child("Discord").set(dName)
     member.child("Family").set(bName)
@@ -161,6 +167,7 @@ async def addGuildie(dName, bName):
 
 # Removes guildie from database
 async def removeGuildie(dName, bName):
+    dName = dName.replace('@', '')
     members = ref.child('Members').get()
     for member in members:
         if members[member]['Family'].upper() == bName.upper():

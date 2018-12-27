@@ -178,18 +178,19 @@ async def removeGuildie(dName, bName):
 async def getGuildieByDiscord(dName, ch, ser):
     members = ref.child('Members').get()
     mem = ser.get_member_named(dName)
-    for member in members:
-        m = members[member]['Discord']
-        if m.upper() == str(mem).upper():
-            msg = (
-                "Results for  [" + dName + "]:\n\n" +
-                "Discord =    [" + m + "]\n" +
-                "BDO Family = [" + members[member]['Family'] + "]"
-                )
-            if mem != None and mem.nick != None:
-                msg += "\nNickname =   [" + mem.nick + "]"
-            await client.send_message(ch, cssMessage(msg))
-            return
+    if mem != None:
+        for member in members:
+            m = members[member]['Discord']
+            if m.upper() == str(mem).upper():
+                msg = (
+                    "Results for  [" + dName + "]:\n\n" +
+                    "Discord =    [" + m + "]\n" +
+                    "BDO Family = [" + members[member]['Family'] + "]"
+                    )
+                if mem.nick != None:
+                    msg += "\nNickname =   [" + mem.nick + "]"
+                await client.send_message(ch, cssMessage(msg))
+                return
     await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
 
 # Searches for a guildie's discord name by its bdo family name

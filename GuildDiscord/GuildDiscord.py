@@ -112,9 +112,9 @@ async def on_message(message):
     elif m.startswith(prefix + "GUILD SEARCH "):
         m = m.replace(prefix + "GUILD SEARCH ", '')
         if m.startswith('FAMILY'):
-            await getGuildieByFamily(message.content[len(prefix + 'GUILD SEARCH FAMILY '):], message.channel)
+            await getGuildieByFamily(message.content[len(prefix + 'GUILD SEARCH FAMILY '):], message.channel, message.server)
         elif m.startswith('DISCORD'):
-            await getGuildieByDiscord(message.content[len(prefix + 'GUILD SEARCH DISCORD '):], message.channel)
+            await getGuildieByDiscord(message.content[len(prefix + 'GUILD SEARCH DISCORD '):], message.channel, message.server)
 
 
 # Checks if the user has permissions to interact with the bot
@@ -175,22 +175,38 @@ async def removeGuildie(dName, bName):
             ref.child('Members').child(member).delete()
 
 # Searches for a guildie's bdo family name by its discord name
-async def getGuildieByDiscord(dName, ch):
+async def getGuildieByDiscord(dName, ch, ser):
     members = ref.child('Members').get()
-    rawDName = dName.split("#")[0]
+    mem = ser.get_member_named(dName)
     for member in members:
-        m = members[member]['Discord'].split("#")[0]
-        if m.upper() == rawDName.upper():
-            await client.send_message(ch, cssMessage("[" + members[member]['Discord'] + "] = [" + members[member]['Family'] + "]"))
+        m = members[member]['Discord']
+        if m.upper() == str(mem).upper():
+            msg = (
+                "Results for  [" + dName + "]:\n\n" +
+                "Discord =    [" + m + "]\n" +
+                "BDO Family = [" + members[member]['Family'] + "]"
+                )
+            if mem != None and mem.nick != None:
+                msg += "\nNickname =   [" + mem.nick + "]"
+            await client.send_message(ch, cssMessage(msg))
             return
     await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
 
 # Searches for a guildie's discord name by its bdo family name
-async def getGuildieByFamily(bName, ch):
+async def getGuildieByFamily(bName, ch, ser):
     members = ref.child('Members').get()
     for member in members:
         if members[member]['Family'].upper() == bName.upper():
-            await client.send_message(ch, cssMessage("[" + bName + "] = [" + members[member]['Discord'] + "]"))
+            msg = (
+                "Results for  [" + bName + "]:\n\n" +
+                "Discord =    [" + members[member]['Discord'] + "]\n" +
+                "BDO Family = [" + members[member]['Family'] + "]"
+                )
+            dName = members[member]['Discord']
+            mem = ser.get_member_named(dName)
+            if mem != None and mem.nick != None:
+                msg += "\nNickname =   [" + mem.nick + "]"
+            await client.send_message(ch, cssMessage(msg))
             return
     await client.send_message(ch, cssMessage("[" + bName + "] was not found"))
 

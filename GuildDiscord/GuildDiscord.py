@@ -1,4 +1,5 @@
 import re
+import os
 
 import discord
 from discord.ext import commands
@@ -7,8 +8,10 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+print(dir_path)
 client = discord.Client()
-cred = credentials.Certificate('risen-59032-ffc0d0af3cc4.json')
+cred = credentials.Certificate(dir_path + '/risen-59032-ffc0d0af3cc4.json')
 default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen-59032.firebaseio.com/'})
 ref = db.reference('Guild')
 prefix = '&'
@@ -217,7 +220,7 @@ def cssMessage(msg):
 
 
 TOKEN = ""
-with open('token', 'r') as t:
+with open(dir_path + '/token', 'r') as t:
     TOKEN = t.read().replace('\n','')
 
 client.run(TOKEN, bot=True)

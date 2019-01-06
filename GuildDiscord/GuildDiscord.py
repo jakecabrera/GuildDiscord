@@ -1,5 +1,10 @@
 import re
 import os
+import io
+import collections
+import time
+import fileinput
+from pathlib import Path
 
 import discord
 from discord.ext import commands
@@ -9,14 +14,26 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-print(dir_path)
+stateFileExists = Path(dir_path + '/state').is_file()
+
 client = discord.Client()
 cred = credentials.Certificate(dir_path + '/risen-59032-ffc0d0af3cc4.json')
 default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen-59032.firebaseio.com/'})
 ref = db.reference('Guild')
 prefix = '&'
 
-okToRun = False
+# 
+if not stateFileExists:
+    with open(dir_path + '/state', 'x') as f:
+        f.write("Available: False\n")
+
+state = {}
+with open(dir_path + '/state') as f:
+    content = f.readlines()
+    for line in content:
+        state[line.split(':')[0].strip()] = line.split(':')[1].strip()
+
+okToRun = state['Available'] == 'True'
 authorizedChannels = {
     "259049604627169291", # Private test channel
     "517203484467134484" # ops channel
@@ -38,7 +55,11 @@ sarge = "247195865989513217" # That's me!!! o/
 @client.event
 async def on_ready():
     print("The bot is ready!")
-    await client.change_presence(game=discord.Game(name="Unavailable"))
+    await client.send_message(client.get_channel("259049604627169291"), "Online!")
+    if not okToRun:
+        await client.change_presence(game=discord.Game(name="Unavailable"))
+    else:
+        await client.change_presence(game=discord.Game(name="Available"))
 
 @client.event
 async def on_message(message):
@@ -49,7 +70,7 @@ async def on_message(message):
         return
 
     m = message.content.upper()
-    removePattern = re.compile(r'<REMOVED.*>.*\[.*\]')
+    removePattern = re.compile(r'<[(REMOVED)|(LEFT)].*>.*\[.*\]')
     namesPattern = re.compile(r'(?<=>)[ ]?.*]')
     discordNamePattern = re.compile(r'.*#\d{4}')
     bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
@@ -60,12 +81,19 @@ async def on_message(message):
         args = m.split(" ")
         if args[1] == 'STOP' or args[1] == 'PAUSE':
             okToRun = False
+            with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
+                for line in f:
+                    print(line.replace('Available: True', 'Available: False'), end='')
             await client.send_message(message.channel, cssMessage("Commands are no longer available"))
             await client.change_presence(game=discord.Game(name="Unavailable"))
         elif args[1] == 'CONTINUE' or args[1] == 'START':
             okToRun = True
+            with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
+                for line in f:
+                    print(line.replace('Available: False', 'Available: True'), end='')
             await client.send_message(message.channel, cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
+        print("okToRun changed to [" + str(okToRun) + "]")
 
     # Mission Commands
     elif (m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS")) and message.channel.id in authorizedChannels and okToRun:    
@@ -76,17 +104,23 @@ async def on_message(message):
 
         args = m.split(" ")
         if args[1] == 'FINISH':
+            print("Attempting to finish mission...")
             await finishMission(message.channel)
         elif args[1] == 'START': # doesn't really do anything yet
             startMission()
 
     # Ping Pong
     elif m.startswith(prefix + "PING"):
+        print("Ping!")
         await client.send_message(message.channel, "pong!")
 
     # Help!
     elif m.startswith(prefix + "HELP"):
+        print("Displaying Help Message...")
         await showHelp(message.channel)
+
+    elif m.startswith("=PAT"):
+        await client.send_message(message.channel, "There there")
 
     # Guildie Tracker
     # Check if adding guildie
@@ -110,14 +144,25 @@ async def on_message(message):
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
             await removeGuildie(dName, bName)
-
-    # Check if searching for guildies
-    elif m.startswith(prefix + "GUILD SEARCH "):
-        m = m.replace(prefix + "GUILD SEARCH ", '')
-        if m.startswith('FAMILY'):
-            await getGuildieByFamily(message.content[len(prefix + 'GUILD SEARCH FAMILY '):], message.channel, message.server)
-        elif m.startswith('DISCORD'):
-            await getGuildieByDiscord(message.content[len(prefix + 'GUILD SEARCH DISCORD '):], message.channel, message.server)
+            
+    # Guild operations
+    if m.startswith(prefix + "GUILD"):
+        i = len(prefix + "GUILD ")
+        m = m[i:]
+        # Search operations
+        if m.startswith("SEARCH"):
+            i += len("SEARCH ")
+            m = m[len("SEARCH "):]
+            # Search by family
+            if m.startswith('FAMILY'):
+                i += len('FAMILY ')
+                await getGuildieByFamily(message.content[i:], message.channel, message.server)
+            # Search by discord
+            elif m.startswith('DISCORD'):
+                i += len('DISCORD ')
+                await getGuildieByDiscord(message.content[i:], message.channel, message.server)
+        if m.startswith("LIST"):
+            await getGuildList(message.channel, message.server)
 
 
 # Checks if the user has permissions to interact with the bot
@@ -167,6 +212,7 @@ async def addGuildie(dName, bName):
     member.child("Discord").set(dName)
     member.child("Family").set(bName)
     member.child("DateAdded").set({".sv": "timestamp"})
+    print("Added dName: [" + dName + "]\t[" + bName + "]")
 
 # Removes guildie from database
 async def removeGuildie(dName, bName):
@@ -179,8 +225,10 @@ async def removeGuildie(dName, bName):
 
 # Searches for a guildie's bdo family name by its discord name
 async def getGuildieByDiscord(dName, ch, ser):
+    print("Getting guildie by discord")
     members = ref.child('Members').get()
     mem = ser.get_member_named(dName)
+    print(mem)
     if mem != None:
         for member in members:
             m = members[member]['Discord']
@@ -192,8 +240,10 @@ async def getGuildieByDiscord(dName, ch, ser):
                     )
                 if mem.nick != None:
                     msg += "\nNickname =   [" + mem.nick + "]"
+                print(msg)
                 await client.send_message(ch, cssMessage(msg))
                 return
+    print("[" + dName + "] was not found")
     await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
 
 # Searches for a guildie's discord name by its bdo family name
@@ -210,9 +260,36 @@ async def getGuildieByFamily(bName, ch, ser):
             mem = ser.get_member_named(dName)
             if mem != None and mem.nick != None:
                 msg += "\nNickname =   [" + mem.nick + "]"
+            print(msg)
             await client.send_message(ch, cssMessage(msg))
             return
+    print("[" + bName + "] was not found")
     await client.send_message(ch, cssMessage("[" + bName + "] was not found"))
+
+# Get a list of current guild members!
+async def getGuildList(ch, ser):
+    print("Getting list of guild members!")
+    members = ref.child('Members').get()
+    guildList = {}
+    msg = ""
+    for member in members:
+        info = [members[member]['Discord']]
+        dName = ser.get_member_named(members[member]['Discord'])
+        if dName != None and dName.nick != None:
+            info.append(dName.nick)
+        guildList[members[member]['Family']] = info
+    guildList = collections.OrderedDict(sorted(guildList.items()))
+    i = 1
+    for k, v in guildList.items():
+        msg += str(i) + ": Family: " + k + "\r\n    Discord: " + v[0] + "\r\n"
+        if len(v) > 1:
+            msg += "    Nickname: " + v[1] + "\r\n"
+        i += 1
+    with io.open("guildList.txt", "w", encoding="utf-8") as f:
+        f.write(msg)
+    await client.send_file(ch, "guildList.txt")
+
+
 
 # returns a string that is styled in css way for discord
 def cssMessage(msg):

@@ -51,6 +51,13 @@ authorizedRoles = {
     }
 
 sarge = "247195865989513217" # That's me!!! o/
+hooligans = "474236074017685506"
+guildRoles = {
+    "474236074017685506",
+    "474234873763201026",
+    "474235266190540800",
+    "475010938148225036" # Lead vegan dev
+    }
 
 @client.event
 async def on_ready():
@@ -71,6 +78,7 @@ async def on_message(message):
 
     m = message.content.upper()
     removePattern = re.compile(r'<[(REMOVED)|(LEFT)].*>.*\[.*\]')
+    updatePattern = re.compile(r'<[(UPDATED)|(UPDATE)].*>.*\[.*\]')
     namesPattern = re.compile(r'(?<=>)[ ]?.*]')
     discordNamePattern = re.compile(r'.*#\d{4}')
     bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
@@ -145,6 +153,18 @@ async def on_message(message):
             bName = bdoNamePattern.search(x).group()
             await removeGuildie(dName, bName)
             
+    # Check if updating guildie
+    if len(updatePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
+        print("Updating!")
+        a = updatePattern.findall(message.content)
+        c = '\n'.join(a)
+        b = namesPattern.findall(c)
+        for x in b:
+            args = x.lstrip().split(" ")
+            dName = discordNamePattern.search(x.lstrip()).group()
+            bName = bdoNamePattern.search(x).group()
+            await updateGuildie(dName, bName)
+
     # Guild operations
     if m.startswith(prefix + "GUILD"):
         i = len(prefix + "GUILD ")
@@ -163,6 +183,8 @@ async def on_message(message):
                 await getGuildieByDiscord(message.content[i:], message.channel, message.server)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
+        if m.startswith("DISCORD GET MISSING"):
+            await getDiscordMissing(message.channel, message.server)
 
 
 # Checks if the user has permissions to interact with the bot
@@ -200,7 +222,9 @@ async def showHelp(ch):
         helpMessage += (
             "\n\nSUPER SECRET OFFICER ONLY COMMANDS\n\n" +
             "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
-            "\t[" + prefix + "mission finish]"
+            "\t[" + prefix + "mission finish]\n" +
+            "# To get a list of mismatched named guild members:\n" +
+            "\t[" + prefix + "guild discord get missing]"
             )
     await client.send_message(ch, cssMessage(helpMessage))
     return
@@ -222,6 +246,18 @@ async def removeGuildie(dName, bName):
         if members[member]['Family'].upper() == bName.upper():
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
             ref.child('Members').child(member).delete()
+
+# Update guildie
+async def updateGuildie(dName, bName):
+    print(dName)
+    print(bName)
+    members = ref.child('Members').get()
+    for member in members:
+        if members[member]['Family'] == bName:
+            ref.child('Members').child(member).update({'Discord': dName})
+        elif members[member]['Discord'] == dName:
+            ref.child('Members').child(member).update({'Family': bName})
+
 
 # Searches for a guildie's bdo family name by its discord name
 async def getGuildieByDiscord(dName, ch, ser):
@@ -289,7 +325,51 @@ async def getGuildList(ch, ser):
         f.write(msg)
     await client.send_file(ch, "guildList.txt")
 
-
+# Gets the discrepencies in guild members
+async def getDiscordMissing(ch, ser):
+    await client.send_typing(ch)
+    members = ref.child('Members').get()
+    dNameMembers = {}
+    print("Getting firbase members")
+    for member in members:
+        dNameMembers[members[member]['Discord']] = members[member]['Family']
+    hooligans = []
+    print("getting discord members")
+    for member in ser.members:
+        isGuildMember = False
+        for mRole in member.roles:
+            if mRole.id in guildRoles:
+                isGuildMember = True
+        if isGuildMember:
+            hooligans.append(member.name + '#' + member.discriminator)
+    discordMissing = []
+    print("Comparing")
+    for member in hooligans:
+        if not member in dNameMembers:
+            discordMissing.append(member)
+    bdoMissing = []
+    for member in dNameMembers.keys():
+        if not member in hooligans:
+            bdoMissing.append(member)
+    if len(discordMissing) > 0:
+        msg = ''
+        for member in discordMissing:
+            msg += member + '\r\n'
+        print("Writing")
+        with io.open("guildDiscordMissing.txt", "w", encoding="utf-8") as f:
+            f.write(msg)
+        await client.send_message(ch, cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
+    if len(bdoMissing) > 0:
+        msg = ''
+        for member in bdoMissing:
+            msg += member + '\r\n'
+            msg += '\t\tFamily Name: ' + dNameMembers[member] + '\r\n'
+        print("Writing")
+        with io.open("guildBdoMissing.txt", "w", encoding="utf-8") as f:
+            f.write(msg)
+        await client.send_message(ch, cssMessage("The following members were found in BDO as part of the guild but not in discord:\n\n" + msg))
+    if len(bdoMissing) == 0 and len(discordMissing) == 0:
+        await client.send_message(ch, cssMessage("All members accounted for!"))
 
 # returns a string that is styled in css way for discord
 def cssMessage(msg):

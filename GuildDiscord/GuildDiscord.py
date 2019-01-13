@@ -323,7 +323,7 @@ async def getGuildList(ch, ser):
         i += 1
     with io.open(dir_path + "/guildList.txt", "w", encoding="utf-8") as f:
         f.write(msg)
-    await client.send_file(ch, "guildList.txt")
+    await client.send_file(ch, dir_path + "/guildList.txt")
 
 # Gets the discrepencies in guild members
 async def getDiscordMissing(ch, ser):
@@ -367,7 +367,7 @@ async def getDiscordMissing(ch, ser):
         print("Writing")
         with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
             f.write(msg)
-        await client.send_message(ch, cssMessage("The following members were found in BDO as part of the guild but not in discord:\n\n" + msg))
+        await client.send_message(ch, cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
     if len(bdoMissing) == 0 and len(discordMissing) == 0:
         await client.send_message(ch, cssMessage("All members accounted for!"))
 

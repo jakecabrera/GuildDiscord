@@ -321,7 +321,7 @@ async def getGuildList(ch, ser):
         if len(v) > 1:
             msg += "    Nickname: " + v[1] + "\r\n"
         i += 1
-    with io.open("guildList.txt", "w", encoding="utf-8") as f:
+    with io.open(dir_path + "/guildList.txt", "w", encoding="utf-8") as f:
         f.write(msg)
     await client.send_file(ch, "guildList.txt")
 
@@ -356,7 +356,7 @@ async def getDiscordMissing(ch, ser):
         for member in discordMissing:
             msg += member + '\r\n'
         print("Writing")
-        with io.open("guildDiscordMissing.txt", "w", encoding="utf-8") as f:
+        with io.open(dir_path + "/guildDiscordMissing.txt", "w", encoding="utf-8") as f:
             f.write(msg)
         await client.send_message(ch, cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
     if len(bdoMissing) > 0:
@@ -365,7 +365,7 @@ async def getDiscordMissing(ch, ser):
             msg += member + '\r\n'
             msg += '\t\tFamily Name: ' + dNameMembers[member] + '\r\n'
         print("Writing")
-        with io.open("guildBdoMissing.txt", "w", encoding="utf-8") as f:
+        with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
             f.write(msg)
         await client.send_message(ch, cssMessage("The following members were found in BDO as part of the guild but not in discord:\n\n" + msg))
     if len(bdoMissing) == 0 and len(discordMissing) == 0:

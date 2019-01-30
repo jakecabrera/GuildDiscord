@@ -22,7 +22,7 @@ default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen
 ref = db.reference('Guild')
 prefix = '&'
 
-# 
+# File to check if still available to complete missions or not
 if not stateFileExists:
     with open(dir_path + '/state', 'x') as f:
         f.write("Available: False\n")
@@ -45,17 +45,19 @@ databaseChannels = {
     }
 
 authorizedRoles = {
+    "539836157656301570", # Leadership
     "513372116519878716", # Role from my test server
-    "474235266190540800", # Risen Probably senpai notice me
-    "474234873763201026" # Risen Probably officer
+    "474234873763201026", # Senpai notice me
+    "474235266190540800", # Risen officer
     }
 
 sarge = "247195865989513217" # That's me!!! o/
 hooligans = "474236074017685506"
 guildRoles = {
-    "474236074017685506",
-    "474234873763201026",
-    "474235266190540800",
+    "539836157656301570", # Leadership
+    hooligans,
+    "474234873763201026", # Senpai Notice Me
+    "474235266190540800", # Officer
     "475010938148225036" # Lead vegan dev
     }
 
@@ -120,6 +122,16 @@ async def on_message(message):
     # Ping Pong
     elif m.startswith(prefix + "PING"):
         print("Ping!")
+        roles = message.server.roles
+        msg = ""
+        for role in roles:
+            msg += role.id + ":\t" + role.name + "\n"
+        await client.send_message(client.get_channel("259049604627169291"), msg)
+        channels = message.server.channels
+        msg = ""
+        for channel in channels:
+            msg += channel.id + ":\t" + channel.name + "\n"
+        await client.send_message(client.get_channel("259049604627169291"), msg)
         await client.send_message(message.channel, "pong!")
 
     # Help!
@@ -183,7 +195,7 @@ async def on_message(message):
                 await getGuildieByDiscord(message.content[i:], message.channel, message.server)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
-        if m.startswith("DISCORD GET MISSING"):
+        if m.startswith("GET MISSING"):
             await getDiscordMissing(message.channel, message.server)
 
 
@@ -212,7 +224,7 @@ def startMission():
 async def showHelp(ch):
     helpMessage = (
         "HELP WINDOW\n\n" +
-        "# Guild Member Searching:\n" +
+        "# Guild Member Searching (Case-Sensitive):\n" +
         "# To search by a guild members discord name use:\n" +
         "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
         "# To search by a guild members bdo family name use:\n" +
@@ -224,7 +236,7 @@ async def showHelp(ch):
             "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
             "\t[" + prefix + "mission finish]\n" +
             "# To get a list of mismatched named guild members:\n" +
-            "\t[" + prefix + "guild discord get missing]"
+            "\t[" + prefix + "guild get missing]"
             )
     await client.send_message(ch, cssMessage(helpMessage))
     return
@@ -232,6 +244,12 @@ async def showHelp(ch):
 # Adds an entry to the database
 async def addGuildie(dName, bName):
     dName = dName.replace('@', '')
+    members = ref.child('Members').get()
+    for member in members:
+        m = members[member]
+        if m['Family'].upper() == bName.upper() or m['Discord'] == dName:
+            print("Member already exists")
+            return
     member = ref.child('Members').push()
     member.child("Discord").set(dName)
     member.child("Family").set(bName)
@@ -329,10 +347,14 @@ async def getGuildList(ch, ser):
 async def getDiscordMissing(ch, ser):
     await client.send_typing(ch)
     members = ref.child('Members').get()
+
+    # Get all bdo members from firebase
     dNameMembers = {}
     print("Getting firbase members")
     for member in members:
         dNameMembers[members[member]['Discord']] = members[member]['Family']
+
+    # Get all hooligans from discord
     hooligans = []
     print("getting discord members")
     for member in ser.members:
@@ -342,15 +364,20 @@ async def getDiscordMissing(ch, ser):
                 isGuildMember = True
         if isGuildMember:
             hooligans.append(member.name + '#' + member.discriminator)
+
+    # Compare hooligans against the bdo members
     discordMissing = []
     print("Comparing")
     for member in hooligans:
         if not member in dNameMembers:
             discordMissing.append(member)
+
+    # Compare bdo members against hooligans
     bdoMissing = []
     for member in dNameMembers.keys():
         if not member in hooligans:
             bdoMissing.append(member)
+
     if len(discordMissing) > 0:
         msg = ''
         for member in discordMissing:

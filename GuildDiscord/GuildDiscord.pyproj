@@ -28,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="risen-59032-ffc0d0af3cc4.json" />
+    <Content Include="Todo.txt" />
     <Content Include="token" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

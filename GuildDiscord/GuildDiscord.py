@@ -79,8 +79,8 @@ async def on_message(message):
         return
 
     m = message.content.upper()
-    removePattern = re.compile(r'<[(REMOVED)|(LEFT)].*>.*\[.*\]')
-    updatePattern = re.compile(r'<[(UPDATED)|(UPDATE)].*>.*\[.*\]')
+    removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
+    updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
     namesPattern = re.compile(r'(?<=>)[ ]?.*]')
     discordNamePattern = re.compile(r'.*#\d{4}')
     bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
@@ -122,16 +122,16 @@ async def on_message(message):
     # Ping Pong
     elif m.startswith(prefix + "PING"):
         print("Ping!")
-        roles = message.server.roles
-        msg = ""
-        for role in roles:
-            msg += role.id + ":\t" + role.name + "\n"
-        await client.send_message(client.get_channel("259049604627169291"), msg)
-        channels = message.server.channels
-        msg = ""
-        for channel in channels:
-            msg += channel.id + ":\t" + channel.name + "\n"
-        await client.send_message(client.get_channel("259049604627169291"), msg)
+        #roles = message.server.roles
+        #msg = ""
+        #for role in roles:
+        #    msg += role.id + ":\t" + role.name + "\n"
+        #await client.send_message(client.get_channel("259049604627169291"), msg)
+        #channels = message.server.channels
+        #msg = ""
+        #for channel in channels:
+        #    msg += channel.id + ":\t" + channel.name + "\n"
+        #await client.send_message(client.get_channel("259049604627169291"), msg)
         await client.send_message(message.channel, "pong!")
 
     # Help!
@@ -140,6 +140,7 @@ async def on_message(message):
         await showHelp(message.channel)
 
     elif m.startswith("=PAT"):
+        time.sleep(2)
         await client.send_message(message.channel, "There there")
 
     # Guildie Tracker
@@ -152,7 +153,7 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await addGuildie(dName, bName)
+            await addGuildie(dName, bName, message.channel)
 
     # Check if removing guildie
     if len(removePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -163,7 +164,7 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await removeGuildie(dName, bName)
+            await removeGuildie(dName, bName, message.channel)
             
     # Check if updating guildie
     if len(updatePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -175,7 +176,7 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await updateGuildie(dName, bName)
+            await updateGuildie(dName, bName, message.channel)
 
     # Guild operations
     if m.startswith(prefix + "GUILD"):
@@ -186,8 +187,11 @@ async def on_message(message):
             i += len("SEARCH ")
             m = m[len("SEARCH "):]
             # Search by family
-            if m.startswith('FAMILY'):
-                i += len('FAMILY ')
+            if m.startswith('FAMILY') or m.startswith('BDO'):
+                if m.startswith('FAMILY'):
+                    i += len('FAMILY ')
+                else:
+                    i += len('BDO ')
                 await getGuildieByFamily(message.content[i:], message.channel, message.server)
             # Search by discord
             elif m.startswith('DISCORD'):
@@ -228,7 +232,8 @@ async def showHelp(ch):
         "# To search by a guild members discord name use:\n" +
         "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
         "# To search by a guild members bdo family name use:\n" +
-        "\t[" + prefix + "guild search family <USER_NAME_GOES_HERE>]"
+        "\t[" + prefix + "guild search family <USER_NAME_GOES_HERE>]\n" +
+        "\t[" + prefix + "guild search bdo <USER_NAME_GOES_HERE>]"
     )
     if ch.id in authorizedChannels:
         helpMessage += (
@@ -242,39 +247,61 @@ async def showHelp(ch):
     return
 
 # Adds an entry to the database
-async def addGuildie(dName, bName):
+async def addGuildie(dName, bName, ch):
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
     for member in members:
         m = members[member]
         if m['Family'].upper() == bName.upper() or m['Discord'] == dName:
             print("Member already exists")
+            if m['Family'].upper() == bName.upper():
+                await client.send_message(ch, cssMessage("Member already exists with that Family name"))
+            else:
+                await client.send_message(ch, cssMessage("Member already exists with that Discord name"))
             return
     member = ref.child('Members').push()
     member.child("Discord").set(dName)
     member.child("Family").set(bName)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
+    await client.send_message(ch, cssMessage("Added Discord:  [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
 # Removes guildie from database
-async def removeGuildie(dName, bName):
+async def removeGuildie(dName, bName, ch):
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
+    removedSomeone = False
     for member in members:
         if members[member]['Family'].upper() == bName.upper():
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
             ref.child('Members').child(member).delete()
+            removedSomeone = True
+            await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t Bdo Family: [" + bName + "]"))
+        if removedSomeone:
+            return
+    await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+
 
 # Update guildie
-async def updateGuildie(dName, bName):
+async def updateGuildie(dName, bName, ch):
     print(dName)
     print(bName)
     members = ref.child('Members').get()
+    updatedSomeone = False
     for member in members:
         if members[member]['Family'] == bName:
+            oldDiscord = members[member]['Discord']
             ref.child('Members').child(member).update({'Discord': dName})
+            updatedSomeone = True
+            await client.send_message(ch, cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
         elif members[member]['Discord'] == dName:
+            oldFamily = members[member]['Family']
             ref.child('Members').child(member).update({'Family': bName})
+            updatedSomeone = True
+            await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldFamily + "] to [" + bName + "]"))
+        if updatedSomeone:
+            return
+    await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
 
 # Searches for a guildie's bdo family name by its discord name

@@ -188,15 +188,27 @@ async def on_message(message):
             m = m[len("SEARCH "):]
             # Search by family
             if m.startswith('FAMILY') or m.startswith('BDO'):
-                if m.startswith('FAMILY'):
-                    i += len('FAMILY ')
-                else:
-                    i += len('BDO ')
-                await getGuildieByFamily(message.content[i:], message.channel, message.server, m.endswith(" -A"))
+                addtl = len(m.split(" ")[0]) + 1
+                i += addtl
+                m = m[addtl:]
+                alt = m.startswith("-A ")
+                if alt:
+                    i += len(m.split(" ")[0]) + 1
+                #if m.startswith('FAMILY'):
+                #    i += len('FAMILY ')
+                #else:
+                #    i += len('BDO ')
+                await getGuildieByFamily(message.content[i:], message.channel, message.server, alt)
             # Search by discord
             elif m.startswith('DISCORD'):
-                i += len('DISCORD ')
-                await getGuildieByDiscord(message.content[i:], message.channel, message.server, m.endswith(" -A"))
+                addtl = len(m.split(" ")[0]) + 1
+                i += addtl
+                m = m[addtl:]
+                alt = m.startswith("-A ")
+                if alt:
+                    i += len(m.split(" ")[0]) + 1
+                #i += len('DISCORD ')
+                await getGuildieByDiscord(message.content[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):
@@ -234,7 +246,7 @@ async def showHelp(ch):
         "# To search by a guild members bdo family name use:\n" +
         "\t[" + prefix + "guild search family <USER_NAME_GOES_HERE>]\n" +
         "\t[" + prefix + "guild search bdo <USER_NAME_GOES_HERE>]\n" +
-        "# Add [-a] to the end of any of the above commands for\n" + 
+        "# Add [-a] before the name for any of the above commands for\n" + 
         "# something easier to copy for add-and-remove."
     )
     if ch.id in authorizedChannels:
@@ -308,8 +320,6 @@ async def updateGuildie(dName, bName, ch):
 
 # Searches for a guildie's bdo family name by its discord name
 async def getGuildieByDiscord(dName, ch, ser, alt=False):
-    if alt:
-        dName = dName[:-3]
     print("Getting guildie by discord")
     members = ref.child('Members').get()
     mem = ser.get_member_named(dName)
@@ -340,8 +350,6 @@ async def getGuildieByDiscord(dName, ch, ser, alt=False):
 
 # Searches for a guildie's discord name by its bdo family name
 async def getGuildieByFamily(bName, ch, ser, alt=False):
-    if alt:
-        bName = bName[:-3]
     members = ref.child('Members').get()
     for member in members:
         if members[member]['Family'].upper() == bName.upper():
@@ -365,8 +373,6 @@ async def getGuildieByFamily(bName, ch, ser, alt=False):
             await client.send_message(ch, cssMessage(msg))
             return
     print("[" + bName + "] was not found")
-    if (alt):
-        return
     await client.send_message(ch, cssMessage("[" + bName + "] was not found"))
 
 # Get a list of current guild members!

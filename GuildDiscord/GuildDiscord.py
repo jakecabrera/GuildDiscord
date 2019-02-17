@@ -5,6 +5,7 @@ import collections
 import time
 import fileinput
 from pathlib import Path
+from difflib import get_close_matches
 
 import discord
 from discord.ext import commands
@@ -321,47 +322,65 @@ async def updateGuildie(dName, bName, ch):
 # Searches for a guildie's bdo family name by its discord name
 async def getGuildieByDiscord(dName, ch, ser, alt=False):
     print("Getting guildie by discord")
+
+    mems = []
+    nicks = []
+    for mem in ser.members:
+        mems.append(mem.name.upper())
+        if mem.nick != None:
+            nicks.append(mem.nick)
+
     members = ref.child('Members').get()
-    mem = ser.get_member_named(dName)
-    print(mem)
-    if mem != None:
-        for member in members:
-            m = members[member]['Discord']
-            if m.upper() == str(mem).upper():
-                msg = ""
-                if alt:
-                    msg = (
-                        "Results for  [" + dName + "]:\n\n" +
-                       m + " [" + members[member]['Family'] + "]"
-                        )
-                else:
-                    msg = (
-                        "Results for  [" + dName + "]:\n\n" +
-                        "Discord =    [" + m + "]\n" +
-                        "BDO Family = [" + members[member]['Family'] + "]"
-                        )
-                    if mem.nick != None:
-                        msg += "\nNickname =   [" + mem.nick + "]"
-                print(msg)
-                await client.send_message(ch, cssMessage(msg))
-                return
-    print("[" + dName + "] was not found")
-    await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
+
+    matches = get_close_matches(dName.upper(), mems)
+    for match in get_close_matches(dName, nicks):
+        m = ser.get_member_named(match)
+        if m != None:
+            matches.append(m.name.upper())
+    print(matches)
+    msg = "Results for  [" + dName + "]:"
+    resultFound = False
+
+    for member in members:
+        m = members[member]['Discord']
+        if m.split("#")[0].upper() in matches:
+            print("match")
+            resultFound = True
+            msg += "\n\n--------------------------------------------\n"
+            if alt:
+                msg += (
+                    m + " [" + members[member]['Family'] + "]"
+                    )
+            else:
+                msg += (
+                    "Discord =    [" + m + "]\n" +
+                    "BDO Family = [" + members[member]['Family'] + "]"
+                    )
+                mem = ser.get_member_named(m.split("#")[0])
+                if mem.nick != None:
+                    msg += "\nNickname =   [" + mem.nick + "]"
+            msg += "\n--------------------------------------------\n"
+            break
+    if resultFound:            
+        print(msg)
+        await client.send_message(ch, cssMessage(msg))
+    else:
+        print("[" + dName + "] was not found")
+        await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
 
 # Searches for a guildie's discord name by its bdo family name
 async def getGuildieByFamily(bName, ch, ser, alt=False):
     members = ref.child('Members').get()
+    msg = "Results for  [" + bName + "]:"
     for member in members:
         if members[member]['Family'].upper() == bName.upper():
-            msg = ""
+            msg += "\n\n--------------------------------------------\n"
             if alt:
-                msg = (
-                    "Results for  [" + bName + "]:\n\n" +
+                msg += (
                     members[member]['Discord'] + " [" + members[member]['Family'] + "]"
                     )
             else:
-                msg = (
-                    "Results for  [" + bName + "]:\n\n" +
+                msg += (
                     "Discord =    [" + members[member]['Discord'] + "]\n" +
                     "BDO Family = [" + members[member]['Family'] + "]"
                     )
@@ -369,6 +388,7 @@ async def getGuildieByFamily(bName, ch, ser, alt=False):
                 mem = ser.get_member_named(dName)
                 if mem != None and mem.nick != None:
                     msg += "\nNickname =   [" + mem.nick + "]"
+            msg += "\n--------------------------------------------\n"
             print(msg)
             await client.send_message(ch, cssMessage(msg))
             return

@@ -147,30 +147,39 @@ async def on_message(message):
     # Guildie Tracker
     # Check if adding guildie
     if len(addPattern.findall(m)) > 0 and message.channel.id in databaseChannels:
-        a = addPattern.findall(message.content)
+        mesg = message.content
+        for mention in message.mentions:
+            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+        a = addPattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
         for x in b:
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await addGuildie(dName, bName, message.channel)
+            await addGuildie(dName, bName, message.channel, message.server)
 
     # Check if removing guildie
     if len(removePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
-        a = removePattern.findall(message.content)
+        mesg = message.content
+        for mention in message.mentions:
+            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+        a = removePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
         for x in b:
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await removeGuildie(dName, bName, message.channel)
+            await removeGuildie(dName, bName, message.channel, message.server)
             
     # Check if updating guildie
     if len(updatePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
         print("Updating!")
-        a = updatePattern.findall(message.content)
+        mesg = message.content
+        for mention in message.mentions:
+            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+        a = updatePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
         for x in b:
@@ -262,7 +271,7 @@ async def showHelp(ch):
     return
 
 # Adds an entry to the database
-async def addGuildie(dName, bName, ch):
+async def addGuildie(dName, bName, ch, ser):
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
     for member in members:
@@ -279,19 +288,33 @@ async def addGuildie(dName, bName, ch):
     member.child("Family").set(bName)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
+
+    # Roles
+    dMem = ser.get_member_named(dName)
+    if dMem != None:
+        role = discord.utils.get(ser.roles, id="474236074017685506")
+        if role != None:
+            await client.replace_roles(dMem, role)
+
     await client.send_message(ch, cssMessage("Added Discord:  [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
 # Removes guildie from database
-async def removeGuildie(dName, bName, ch):
+async def removeGuildie(dName, bName, ch, ser):
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
     removedSomeone = False
     for member in members:
-        if members[member]['Family'].upper() == bName.upper():
+        if members[member]['Family'].upper() == bName.upper() or members[member]['Discord'].upper() == dName.upper():
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
             ref.child('Members').child(member).delete()
             removedSomeone = True
             await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t Bdo Family: [" + bName + "]"))
+        # Roles
+        dMem = ser.get_member_named(dName)
+        if dMem != None:
+            role = discord.utils.get(ser.roles, id="485301856004734988")
+            if role != None:
+                await client.replace_roles(dMem, role)
         if removedSomeone:
             return
     await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
@@ -337,14 +360,12 @@ async def getGuildieByDiscord(dName, ch, ser, alt=False):
         m = ser.get_member_named(match)
         if m != None:
             matches.append(m.name.upper())
-    print(matches)
     msg = "Results for  [" + dName + "]:"
     resultFound = False
 
     for member in members:
         m = members[member]['Discord']
         if m.split("#")[0].upper() in matches:
-            print("match")
             resultFound = True
             msg += "\n\n--------------------------------------------\n"
             if alt:

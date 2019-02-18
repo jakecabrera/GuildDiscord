@@ -250,7 +250,7 @@ def startMission():
 async def showHelp(ch):
     helpMessage = (
         "HELP WINDOW\n\n" +
-        "# Guild Member Searching (Case-Sensitive):\n" +
+        "# Guild Member Searching:\n" +
         "# To search by a guild members discord name use:\n" +
         "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
         "# To search by a guild members bdo family name use:\n" +
@@ -288,15 +288,20 @@ async def addGuildie(dName, bName, ch, ser):
     member.child("Family").set(bName)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
+    await client.send_message(ch, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
     # Roles
-    dMem = ser.get_member_named(dName)
-    if dMem != None:
-        role = discord.utils.get(ser.roles, id="474236074017685506")
-        if role != None:
-            await client.replace_roles(dMem, role)
-
-    await client.send_message(ch, cssMessage("Added Discord:  [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+    try:
+        dMem = ser.get_member_named(dName)
+        if dMem != None:
+            role = discord.utils.get(ser.roles, id="474236074017685506") #Become a hooligan
+            altRole = discord.utils.get(ser.roles, id="513371978816552960") #Become a boy
+            if role != None:
+                await client.replace_roles(dMem, role)
+            if altRole != None:
+                await client.replace_roles(dMem, altRole)
+    except:
+        print("Could not edit roles")
 
 # Removes guildie from database
 async def removeGuildie(dName, bName, ch, ser):
@@ -308,16 +313,23 @@ async def removeGuildie(dName, bName, ch, ser):
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
             ref.child('Members').child(member).delete()
             removedSomeone = True
-            await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t Bdo Family: [" + bName + "]"))
-        # Roles
+            await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t BDO Family: [" + bName + "]"))
+        if removedSomeone:
+            break
+    # Roles
+    try:
         dMem = ser.get_member_named(dName)
         if dMem != None:
-            role = discord.utils.get(ser.roles, id="485301856004734988")
+            role = discord.utils.get(ser.roles, id="485301856004734988") #Become an alumni
+            altRole = discord.utils.get(ser.roles, id="513371906896953344") #Become a someone
             if role != None:
                 await client.replace_roles(dMem, role)
-        if removedSomeone:
-            return
-    await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+            if altRole != None:
+                await client.replace_roles(dMem, altRole)
+    except:
+        print("Could not edit roles")
+    if not removedSomeone:
+        await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
 
 # Update guildie
@@ -380,8 +392,7 @@ async def getGuildieByDiscord(dName, ch, ser, alt=False):
                 mem = ser.get_member_named(m.split("#")[0])
                 if mem.nick != None:
                     msg += "\nNickname =   [" + mem.nick + "]"
-            msg += "\n--------------------------------------------\n"
-            break
+            msg += "\n--------------------------------------------"
     if resultFound:            
         print(msg)
         await client.send_message(ch, cssMessage(msg))

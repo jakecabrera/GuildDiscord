@@ -156,6 +156,7 @@ async def on_message(message):
         mesg = message.content
         for mention in message.mentions:
             mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
         a = addPattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -170,6 +171,7 @@ async def on_message(message):
         mesg = message.content
         for mention in message.mentions:
             mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
         a = removePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -185,6 +187,7 @@ async def on_message(message):
         mesg = message.content
         for mention in message.mentions:
             mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
         a = updatePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -199,11 +202,15 @@ async def on_message(message):
         i = len(prefix + "GUILD ")
         m = m[i:]
         if m.startswith("SEARCH"):
+            mesg = message.content
+            for mention in message.mentions:
+                mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
             i += len("SEARCH ")
             alt = m.startswith("-A ")
             if alt:
                 i += len(m.split(" ")[0]) + 1
-            await searchGuildie(message.content[i:], message.channel, message.server, alt)
+            await searchGuildie(mesg[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):

@@ -144,6 +144,12 @@ async def on_message(message):
         time.sleep(2)
         await client.send_message(message.channel, "There there")
 
+    elif m.startswith(prefix + "SPOILER"):
+        c = message.content.split(" ")[1:]
+        c = list(map(lambda x: "||" + x + "||", c))
+        msg = " ".join(c)
+        await client.send_message(message.channel, msg)
+
     # Guildie Tracker
     # Check if adding guildie
     if len(addPattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -192,33 +198,12 @@ async def on_message(message):
     if m.startswith(prefix + "GUILD"):
         i = len(prefix + "GUILD ")
         m = m[i:]
-        # Search operations
         if m.startswith("SEARCH"):
             i += len("SEARCH ")
-            m = m[len("SEARCH "):]
-            # Search by family
-            if m.startswith('FAMILY') or m.startswith('BDO'):
-                addtl = len(m.split(" ")[0]) + 1
-                i += addtl
-                m = m[addtl:]
-                alt = m.startswith("-A ")
-                if alt:
-                    i += len(m.split(" ")[0]) + 1
-                #if m.startswith('FAMILY'):
-                #    i += len('FAMILY ')
-                #else:
-                #    i += len('BDO ')
-                await getGuildieByFamily(message.content[i:], message.channel, message.server, alt)
-            # Search by discord
-            elif m.startswith('DISCORD'):
-                addtl = len(m.split(" ")[0]) + 1
-                i += addtl
-                m = m[addtl:]
-                alt = m.startswith("-A ")
-                if alt:
-                    i += len(m.split(" ")[0]) + 1
-                #i += len('DISCORD ')
-                await getGuildieByDiscord(message.content[i:], message.channel, message.server, alt)
+            alt = m.startswith("-A ")
+            if alt:
+                i += len(m.split(" ")[0]) + 1
+            await searchGuildie(message.content[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):
@@ -251,12 +236,9 @@ async def showHelp(ch):
     helpMessage = (
         "HELP WINDOW\n\n" +
         "# Guild Member Searching:\n" +
-        "# To search by a guild members discord name use:\n" +
-        "\t[" + prefix + "guild search discord <USER_NAME_GOES_HERE>]\n" + 
-        "# To search by a guild members bdo family name use:\n" +
-        "\t[" + prefix + "guild search family <USER_NAME_GOES_HERE>]\n" +
-        "\t[" + prefix + "guild search bdo <USER_NAME_GOES_HERE>]\n" +
-        "# Add [-a] before the name for any of the above commands for\n" + 
+        "# To search by a guild members discord or bdo name use:\n" +
+        "\t[" + prefix + "guild search <NAME_GOES_HERE>]\n"
+        "# Add [-a] before the name for the above command for\n" + 
         "# something easier to copy for add-and-remove."
     )
     if ch.id in authorizedChannels:
@@ -353,79 +335,72 @@ async def updateGuildie(dName, bName, ch):
             return
     await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
+# Search for a guild member in bot discord and bdo family
+async def searchGuildie(search, ch, ser, alt=False):
+    print("Searching for guildie through both discord and bdo")
+    await client.send_typing(ch)
 
-# Searches for a guildie's bdo family name by its discord name
-async def getGuildieByDiscord(dName, ch, ser, alt=False):
-    print("Getting guildie by discord")
+    # In case given discriminator
+    search = search.split("#")[0]
 
-    mems = []
+    # Get current discord names
+    discordMembers = []
     nicks = []
     for mem in ser.members:
-        mems.append(mem.name.upper())
+        discordMembers.append(mem.name.upper())
         if mem.nick != None:
             nicks.append(mem.nick)
 
-    members = ref.child('Members').get()
+    # Get database members
+    dbMembers = ref.child('Members').get()
+    bdoMembers = []
+    for mem in dbMembers:
+        bdoMembers.append(dbMembers[mem]['Family'])
 
-    matches = get_close_matches(dName.upper(), mems)
-    for match in get_close_matches(dName, nicks):
-        m = ser.get_member_named(match)
-        if m != None:
-            matches.append(m.name.upper())
-    msg = "Results for  [" + dName + "]:"
+    matches = []
+    # Check for any matches for the name in discord
+    discordMatches = get_close_matches(search.upper(), discordMembers) 
+    for match in get_close_matches(search, nicks):
+        dis = ser.get_member_named(match)
+        if dis != None and not dis.name.upper() in discordMatches:
+            discordMatches.append(dis.name.upper())
+    matches.extend(discordMatches)
+
+    # Check for any matches for the name in bdo
+    bdoMatches = get_close_matches(search.upper(), bdoMembers)
+    matches.extend(bdoMatches)
+
+    # Base case
+    if not search.upper() in matches:
+        matches.append(search.upper())
+
+    # Begin output message
+    msg = "Results for  [" + search + "]:"
     resultFound = False
 
-    for member in members:
-        m = members[member]['Discord']
-        if m.split("#")[0].upper() in matches:
+    # Search database against matches
+    for member in dbMembers:
+        dis = dbMembers[member]['Discord']
+        bdo = dbMembers[member]['Family']
+        if dis.split("#")[0].upper() in matches or bdo.upper() in matches:
             resultFound = True
             msg += "\n\n--------------------------------------------\n"
             if alt:
-                msg += (
-                    m + " [" + members[member]['Family'] + "]"
-                    )
+                msg += dis + " [" + bdo + "]"
             else:
-                msg += (
-                    "Discord =    [" + m + "]\n" +
-                    "BDO Family = [" + members[member]['Family'] + "]"
-                    )
-                mem = ser.get_member_named(m.split("#")[0])
-                if mem.nick != None:
+                msg += "Discord =    [" + dis + "]\n" + "BDO Family = [" + bdo + "]"
+                mem = ser.get_member_named(dis.split("#")[0])
+                if mem != None and mem.nick != None:
                     msg += "\nNickname =   [" + mem.nick + "]"
             msg += "\n--------------------------------------------"
+
+    # Final messages
     if resultFound:            
         print(msg)
         await client.send_message(ch, cssMessage(msg))
     else:
-        print("[" + dName + "] was not found")
-        await client.send_message(ch, cssMessage("[" + dName + "] was not found"))
-
-# Searches for a guildie's discord name by its bdo family name
-async def getGuildieByFamily(bName, ch, ser, alt=False):
-    members = ref.child('Members').get()
-    msg = "Results for  [" + bName + "]:"
-    for member in members:
-        if members[member]['Family'].upper() == bName.upper():
-            msg += "\n\n--------------------------------------------\n"
-            if alt:
-                msg += (
-                    members[member]['Discord'] + " [" + members[member]['Family'] + "]"
-                    )
-            else:
-                msg += (
-                    "Discord =    [" + members[member]['Discord'] + "]\n" +
-                    "BDO Family = [" + members[member]['Family'] + "]"
-                    )
-                dName = members[member]['Discord']
-                mem = ser.get_member_named(dName)
-                if mem != None and mem.nick != None:
-                    msg += "\nNickname =   [" + mem.nick + "]"
-            msg += "\n--------------------------------------------\n"
-            print(msg)
-            await client.send_message(ch, cssMessage(msg))
-            return
-    print("[" + bName + "] was not found")
-    await client.send_message(ch, cssMessage("[" + bName + "] was not found"))
+        print("[" + search + "] was not found")
+        await client.send_message(ch, cssMessage("[" + search + "] was not found"))
 
 # Get a list of current guild members!
 async def getGuildList(ch, ser):

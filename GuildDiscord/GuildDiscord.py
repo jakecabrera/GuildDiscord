@@ -206,10 +206,12 @@ async def on_message(message):
             for mention in message.mentions:
                 mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
                 mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
             alt = m.startswith("-A ")
             if alt:
                 i += len(m.split(" ")[0]) + 1
+            print("alt?: " + str(alt))
             await searchGuildie(mesg[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)

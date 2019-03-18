@@ -6,6 +6,7 @@ import time
 import fileinput
 from pathlib import Path
 from difflib import get_close_matches
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -164,7 +165,8 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await addGuildie(dName, bName, message.channel, message.server)
+            adder = message.author.name + "#" + message.author.discriminator
+            await addGuildie(dName, bName, message.channel, message.server, adder)
 
     # Check if removing guildie
     if len(removePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -177,9 +179,19 @@ async def on_message(message):
         b = namesPattern.findall(c)
         for x in b:
             args = x.lstrip().split(" ")
-            dName = discordNamePattern.search(x.lstrip()).group()
-            bName = bdoNamePattern.search(x).group()
-            await removeGuildie(dName, bName, message.channel, message.server)
+            #Remover
+            remover = message.author.name + "#" + message.author.discriminator
+            #Discord Name
+            dName = ""
+            disResults = discordNamePattern.search(x.lstrip())
+            if not disResults == None:
+                dName = discordNamePattern.search(x.lstrip()).group()
+            #BDO Name
+            bName = ""
+            bdoResults = bdoNamePattern.search(x)
+            if not bdoResults == None:
+                bName = bdoResults.group()
+            await removeGuildie(dName, bName, message.channel, message.server, remover)
             
     # Check if updating guildie
     if len(updatePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -212,11 +224,31 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await searchGuildie(mesg[i:], message.channel, message.server, alt)
+            await searchMembers(mesg[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
             await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):
             await getDiscordMissing(message.channel, message.server)
+
+    # Alumni operations
+    if m.startswith(prefix + "ALUMNI"):
+        i = len(prefix + "ALUMNI ")
+        m = m[i:]
+        if m.startswith("SEARCH"):
+            mesg = message.content
+            for mention in message.mentions:
+                mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            m = m[len(m.split(" ")[0]) + 1:]
+            i += len("SEARCH ")
+            alt = m.startswith("-A ")
+            if alt:
+                i += len(m.split(" ")[0]) + 1
+            print("alt?: " + str(alt))
+            await searchMembers(mesg[i:], message.channel, message.server, alt, "Alumni")
+
+    else:
+        return
 
 
 # Checks if the user has permissions to interact with the bot
@@ -244,14 +276,16 @@ def startMission():
 async def showHelp(ch):
     helpMessage = (
         "HELP WINDOW\n\n" +
+        "# Ping:\n" +
+        "\t[" + prefix + "ping]\n\n" +
         "# Guild Member Searching:\n" +
         "# To search by a guild members discord or bdo name use:\n" +
         "\t[" + prefix + "guild search <NAME_GOES_HERE>]\n"
-        "# Add [-a] before the name for the above command for\n" + 
-        "# something easier to copy for add-and-remove."
     )
     if ch.id in authorizedChannels:
         helpMessage += (
+            "# Add [-a] before the name for the above command for\n" + 
+            "# something easier to copy for add-and-remove." +
             "\n\nSUPER SECRET OFFICER ONLY COMMANDS\n\n" +
             "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
             "\t[" + prefix + "mission finish]\n" +
@@ -262,9 +296,12 @@ async def showHelp(ch):
     return
 
 # Adds an entry to the database
-async def addGuildie(dName, bName, ch, ser):
+async def addGuildie(dName, bName, ch, ser, adder):
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
+    dMem = ser.get_member_named(dName)
+    if dMem == None:
+        await client.send_message(ch, cssMessage("#Warning: No user found by name of [" + dName + "] found in this server"))
     for member in members:
         m = members[member]
         if m['Family'].upper() == bName.upper() or m['Discord'] == dName:
@@ -277,6 +314,7 @@ async def addGuildie(dName, bName, ch, ser):
     member = ref.child('Members').push()
     member.child("Discord").set(dName)
     member.child("Family").set(bName)
+    member.child("AddedBy").set(adder)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
     await client.send_message(ch, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
@@ -293,15 +331,26 @@ async def addGuildie(dName, bName, ch, ser):
                 await client.replace_roles(dMem, altRole)
     except:
         print("Could not edit roles")
+    if True:
+        return
+    else:
+        return
 
 # Removes guildie from database
-async def removeGuildie(dName, bName, ch, ser):
+async def removeGuildie(dName, bName, ch, ser, remover):
+    if dName == None:
+        dName = ""
     dName = dName.replace('@', '')
     members = ref.child('Members').get()
     removedSomeone = False
     for member in members:
         if members[member]['Family'].upper() == bName.upper() or members[member]['Discord'].upper() == dName.upper():
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
+            dName = members[member]['Discord']
+            bName = members[member]['Family']
+            ref.child('Alumni').child(member).set(ref.child('Members').child(member).get())
+            ref.child('Alumni').child(member).child('RemovedBy').set(remover)    
+            ref.child('Alumni').child(member).child("DateRemoved").set({".sv": "timestamp"})
             ref.child('Members').child(member).delete()
             removedSomeone = True
             await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t BDO Family: [" + bName + "]"))
@@ -321,7 +370,8 @@ async def removeGuildie(dName, bName, ch, ser):
         print("Could not edit roles")
     if not removedSomeone:
         await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
-
+    else:
+        return
 
 # Update guildie
 async def updateGuildie(dName, bName, ch):
@@ -344,8 +394,8 @@ async def updateGuildie(dName, bName, ch):
             return
     await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
-# Search for a guild member in bot discord and bdo family
-async def searchGuildie(search, ch, ser, alt=False):
+# Search for a member in discord and bdo family
+async def searchMembers(search, ch, ser, alt=False, group="Members"):
     print("Searching for guildie through both discord and bdo")
     await client.send_typing(ch)
 
@@ -361,7 +411,7 @@ async def searchGuildie(search, ch, ser, alt=False):
             nicks.append(mem.nick)
 
     # Get database members
-    dbMembers = ref.child('Members').get()
+    dbMembers = ref.child(group).get()
     bdoMembers = []
     for mem in dbMembers:
         bdoMembers.append(dbMembers[mem]['Family'])
@@ -397,10 +447,28 @@ async def searchGuildie(search, ch, ser, alt=False):
             if alt:
                 msg += dis + " [" + bdo + "]"
             else:
-                msg += "Discord =    [" + dis + "]\n" + "BDO Family = [" + bdo + "]"
+                msg += "Discord:      [" + dis + "]\n" + "BDO Family:   [" + bdo + "]"
                 mem = ser.get_member_named(dis.split("#")[0])
                 if mem != None and mem.nick != None:
-                    msg += "\nNickname =   [" + mem.nick + "]"
+                    msg += "\nNickname:     [" + mem.nick + "]"
+                if group == "Members":
+                    adder = None
+                    try:
+                        adder = dbMembers[member]['AddedBy']
+                    except:
+                        print("No Adder")
+                    dateAdded = dbMembers[member]['DateAdded']
+                    dateAdded /= 1000
+                    if not adder == None:
+                        msg += "\nAdded By:     [" + adder + "]"
+                    if not dateAdded == None:
+                        msg += "\nDate Added:   [" + datetime.fromtimestamp(dateAdded).strftime('%Y-%m-%d') + "]"
+                elif group == "Alumni":
+                    remover = dbMembers[member]['RemovedBy']
+                    dateRemoved = dbMembers[member]['DateRemoved']
+                    dateRemoved /= 1000
+                    msg += "\nRemoved By:   [" + remover + "]"
+                    msg += "\nDate Removed: [" + datetime.fromtimestamp(dateRemoved).strftime('%Y-%m-%d') + "]"
             msg += "\n--------------------------------------------"
 
     # Final messages
@@ -488,6 +556,8 @@ async def getDiscordMissing(ch, ser):
         await client.send_message(ch, cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
     if len(bdoMissing) == 0 and len(discordMissing) == 0:
         await client.send_message(ch, cssMessage("All members accounted for!"))
+    else:
+        return
 
 # returns a string that is styled in css way for discord
 def cssMessage(msg):

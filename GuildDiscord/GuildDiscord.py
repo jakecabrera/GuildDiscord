@@ -141,6 +141,25 @@ async def on_message(message):
         print("Displaying Help Message...")
         await showHelp(message.channel)
 
+    elif m.startswith("<HELP>"):
+        print("Moxie? Is that you?")
+        msg = (
+            "<ADDED> discord_name#1234 [bdo_family_name]" +
+            "\n<REMOVED> discord_name#1234 [bdo_family_name]" +
+            "\n<LEFT> discord_name#1234 [bdo_family_name]" +
+            "\n<UPDATED> discord_name#1234 [bdo_family_name]" +
+            "\n\nThe above are the ones Herbert officially recognizes so far. so basically you state in angle brackets '<>' what is happening, then you put their discord name with the discriminator (the numbers that follow the name), and then you put the bdo *family* name in square brackets '[]'." +
+            "\n\nIf you are adding someone to the guild and for some weird reason you don't know their discord name, it is **okay** to omit the discord name as so:" +
+            "\n<ADDED> [bdo_family_name]" +
+            "\n\nIf they have a cool down, can't join just yet, or is added as a friendo for any reason, the format is as follows:" +
+            "\n<FRIENDO (reason why friendo)> discord_name#1234 [bdo_family_name]" +
+            "\nexample:" +
+            "\n<FRIENDO 24h COOLDOWN> sarge841#8833 [Aeldrelm]" +
+            "\n\nWith friendo, a lot of the times you won't know the bdo family name when friendoing. In those cases, omitting the bdo family name is **okay**. Like so:" +
+            "\n<FRIENDO> sarge841#8833 []" 
+            )
+        await client.send_message(message.channel,cssMessage(msg))
+
     elif m.startswith("=PAT"):
         time.sleep(2)
         await client.send_message(message.channel, "There there")
@@ -162,9 +181,16 @@ async def on_message(message):
         c = '\n'.join(a)
         b = namesPattern.findall(c)
         for x in b:
-            args = x.lstrip().split(" ")
-            dName = discordNamePattern.search(x.lstrip()).group()
-            bName = bdoNamePattern.search(x).group()
+            #Discord Name
+            dName = ""
+            disResults = discordNamePattern.search(x.lstrip())
+            if not disResults == None:
+                dName = discordNamePattern.search(x.lstrip()).group()
+            #BDO Name
+            bName = ""
+            bdoResults = bdoNamePattern.search(x)
+            if not bdoResults == None:
+                bName = bdoResults.group()
             adder = message.author.name + "#" + message.author.discriminator
             await addGuildie(dName, bName, message.channel, message.server, adder)
 
@@ -301,15 +327,18 @@ async def addGuildie(dName, bName, ch, ser, adder):
     members = ref.child('Members').get()
     dMem = ser.get_member_named(dName)
     if dMem == None:
-        await client.send_message(ch, cssMessage("#Warning: No user found by name of [" + dName + "] found in this server"))
+        await client.send_message(ch, cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
     for member in members:
         m = members[member]
-        if m['Family'].upper() == bName.upper() or m['Discord'] == dName:
+        if m['Family'].upper() == bName.upper():
             print("Member already exists")
-            if m['Family'].upper() == bName.upper():
-                await client.send_message(ch, cssMessage("Member already exists with that Family name"))
-            else:
-                await client.send_message(ch, cssMessage("Member already exists with that Discord name"))
+            await client.send_message(ch, cssMessage("Member already exists with that Family name"))
+            return
+        elif (dName != "" and m['Discord'] == dName):
+            alt = ref.child('Members').child(member).child('Alts').push(bName)
+            #alt.set(bName)
+            await client.send_message(ch, cssMessage("Member already exists with that Discord name." +
+                                                     "\nAppending to [" + m['Discord'] + "] as an alternate account"))
             return
     member = ref.child('Members').push()
     member.child("Discord").set(dName)
@@ -344,7 +373,7 @@ async def removeGuildie(dName, bName, ch, ser, remover):
     members = ref.child('Members').get()
     removedSomeone = False
     for member in members:
-        if members[member]['Family'].upper() == bName.upper() or members[member]['Discord'].upper() == dName.upper():
+        if members[member]['Family'].upper() == bName.upper() or (dName != "" and members[member]['Discord'].upper() == dName.upper()):
             print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
             dName = members[member]['Discord']
             bName = members[member]['Family']
@@ -385,7 +414,7 @@ async def updateGuildie(dName, bName, ch):
             ref.child('Members').child(member).update({'Discord': dName})
             updatedSomeone = True
             await client.send_message(ch, cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
-        elif members[member]['Discord'] == dName:
+        elif members[member]['Discord'] == dName and members[member]['Discord'] != "":
             oldFamily = members[member]['Family']
             ref.child('Members').child(member).update({'Family': bName})
             updatedSomeone = True

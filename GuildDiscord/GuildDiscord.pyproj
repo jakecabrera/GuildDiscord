@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Member.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="GuildDiscord.py" />
   </ItemGroup>
   <ItemGroup>

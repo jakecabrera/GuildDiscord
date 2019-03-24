@@ -15,6 +15,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+from Member import Member
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 stateFileExists = Path(dir_path + '/state').is_file()
 
@@ -233,7 +235,7 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await updateGuildie(dName, bName, message.channel)
+            await updateGuildie(dName, bName, message.channel, message.author)
 
     # Guild operations
     if m.startswith(prefix + "GUILD"):
@@ -255,6 +257,7 @@ async def on_message(message):
             await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):
             await getDiscordMissing(message.channel, message.server)
+        print("End Guild Ops")
 
     # Alumni operations
     if m.startswith(prefix + "ALUMNI"):
@@ -324,25 +327,24 @@ async def showHelp(ch):
 # Adds an entry to the database
 async def addGuildie(dName, bName, ch, ser, adder):
     dName = dName.replace('@', '')
-    members = ref.child('Members').get()
+    closeRef = ref.child('Members')
     dMem = ser.get_member_named(dName)
     if dMem == None:
         await client.send_message(ch, cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
-    for member in members:
-        m = members[member]
-        if m['Family'].upper() == bName.upper():
+    for key, val in ref.child('Members').get().items():
+        member = Member(val)
+        if member.hasAccount(bName):
             print("Member already exists")
             await client.send_message(ch, cssMessage("Member already exists with that Family name"))
             return
-        elif (dName != "" and m['Discord'] == dName):
-            alt = ref.child('Members').child(member).child('Alts').push(bName)
-            #alt.set(bName)
+        elif (dName != "" and member.discord == dName):
+            closeRef.child(key).child('Accounts').push(bName)
             await client.send_message(ch, cssMessage("Member already exists with that Discord name." +
-                                                     "\nAppending to [" + m['Discord'] + "] as an alternate account"))
+                                                     "\nAppending to [" + member.discord + "] as an alternate account"))
             return
-    member = ref.child('Members').push()
+    member = closeRef.push()
     member.child("Discord").set(dName)
-    member.child("Family").set(bName)
+    member.child("Accounts").push(bName)
     member.child("AddedBy").set(adder)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
@@ -350,7 +352,6 @@ async def addGuildie(dName, bName, ch, ser, adder):
 
     # Roles
     try:
-        dMem = ser.get_member_named(dName)
         if dMem != None:
             role = discord.utils.get(ser.roles, id="474236074017685506") #Become a hooligan
             altRole = discord.utils.get(ser.roles, id="513371978816552960") #Become a boy
@@ -370,55 +371,90 @@ async def removeGuildie(dName, bName, ch, ser, remover):
     if dName == None:
         dName = ""
     dName = dName.replace('@', '')
-    members = ref.child('Members').get()
     removedSomeone = False
-    for member in members:
-        if members[member]['Family'].upper() == bName.upper() or (dName != "" and members[member]['Discord'].upper() == dName.upper()):
-            print("Removing [" + bName + "] = [" + members[member]['Discord'] + "]")
-            dName = members[member]['Discord']
-            bName = members[member]['Family']
-            ref.child('Alumni').child(member).set(ref.child('Members').child(member).get())
-            ref.child('Alumni').child(member).child('RemovedBy').set(remover)    
-            ref.child('Alumni').child(member).child("DateRemoved").set({".sv": "timestamp"})
-            ref.child('Members').child(member).delete()
+    for key, val in ref.child('Members').get().items():
+        member = Member(val)
+        if member.hasAccount(bName) or (dName != "" and member.discord.upper() == dName.upper()):
+            print("Removing [" + bName + "] = [" + member.discord + "]")
+            dName = member.discord
+            bNames = member.accounts
+            ref.child('Alumni').child(key).set(ref.child('Members').child(key).get())
+            ref.child('Alumni').child(key).child('RemovedBy').set(remover)    
+            ref.child('Alumni').child(key).child("DateRemoved").set({".sv": "timestamp"})
+            ref.child('Members').child(key).delete()
             removedSomeone = True
-            await client.send_message(ch, cssMessage("Removed Discord: [" + dName + "]\n\t BDO Family: [" + bName + "]"))
+            removeMsg = "Removed Discord: [" + dName + "]\n\t BDO Family: [" + bNames.pop() + "]"
+            for n in bNames:
+                removeMsg += "\n\t             [" + n + "]"
+            await client.send_message(ch, cssMessage(removeMsg))
         if removedSomeone:
             break
-    # Roles
-    try:
-        dMem = ser.get_member_named(dName)
-        if dMem != None:
-            role = discord.utils.get(ser.roles, id="485301856004734988") #Become an alumni
-            altRole = discord.utils.get(ser.roles, id="513371906896953344") #Become a someone
-            if role != None:
-                await client.replace_roles(dMem, role)
-            if altRole != None:
-                await client.replace_roles(dMem, altRole)
-    except:
-        print("Could not edit roles")
     if not removedSomeone:
         await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
     else:
+        # Roles
+        try:
+            dMem = ser.get_member_named(dName)
+            if dMem != None:
+                role = discord.utils.get(ser.roles, id="485301856004734988") #Become an alumni
+                altRole = discord.utils.get(ser.roles, id="513371906896953344") #Become a someone
+                if role != None:
+                    await client.replace_roles(dMem, role)
+                if altRole != None:
+                    await client.replace_roles(dMem, altRole)
+        except:
+            print("Could not edit roles")
         return
 
 # Update guildie
-async def updateGuildie(dName, bName, ch):
+async def updateGuildie(dName, bName, ch, sender):
     print(dName)
     print(bName)
-    members = ref.child('Members').get()
     updatedSomeone = False
-    for member in members:
-        if members[member]['Family'] == bName:
-            oldDiscord = members[member]['Discord']
-            ref.child('Members').child(member).update({'Discord': dName})
+    for key, val in ref.child('Members').get().items():
+        member = Member(val)
+        if member.hasAccount(bName):
+            oldDiscord = member.discord
+            ref.child('Members').child(key).update({'Discord': dName})
             updatedSomeone = True
             await client.send_message(ch, cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
-        elif members[member]['Discord'] == dName and members[member]['Discord'] != "":
-            oldFamily = members[member]['Family']
-            ref.child('Members').child(member).update({'Family': bName})
-            updatedSomeone = True
-            await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldFamily + "] to [" + bName + "]"))
+        elif member.discord == dName and member.discord != "":
+            if len(member.accounts) == 1:
+                oldName = member.accounts[0]
+                ref.child('Members').child(key).child('Accounts').child(list(ref.child('Members').child(key).child('Accounts').get().keys()).pop()).set(bName)
+                updatedSomeone = True
+                await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
+            else:
+                msg = "[" + member.discord + "] has more than one account.\n Which account would you like to update?\n\n"
+                i = 1
+                for account in member.accounts:
+                    msg += str(i) + ".)\t " + account + "\n"
+                    i += 1
+                msg += "99.)\tCancel\n\n Please reply with the number of your choice."
+                await client.send_message(ch, cssMessage(msg))
+                valid = False
+                def check(m):
+                    return not (m.content.startswith(prefix) or m.content.startswith("<"))
+                while not valid:
+                    reply = await client.wait_for_message(author=sender, channel=ch, check=check)
+                    if reply == None:
+                        await client.send_message(ch, cssMessage("Cancelling update operation."))
+                        return
+                    try:
+                        choice = int(reply.content)
+                        if choice == 99:
+                            await client.send_message(ch, cssMessage("Cancelling update operation."))
+                            return
+                        choice -= 1
+                        for id, acc in val['Accounts'].items():
+                            if acc == member.accounts[choice]:
+                                oldName = member.accounts[choice]
+                                ref.child('Members').child(key).child('Accounts').child(id).set(bName)
+                                updatedSomeone = True
+                                await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
+                                valid = True
+                    except:
+                        await client.send_message(ch, cssMessage("Please reply with only a number matching one of the options."))
         if updatedSomeone:
             return
     await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
@@ -442,8 +478,9 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     # Get database members
     dbMembers = ref.child(group).get()
     bdoMembers = []
-    for mem in dbMembers:
-        bdoMembers.append(dbMembers[mem]['Family'])
+    for key, val in dbMembers.items():
+        member = Member(val)
+        bdoMembers += member.accounts
 
     matches = []
     # Check for any matches for the name in discord
@@ -455,8 +492,7 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     matches.extend(discordMatches)
 
     # Check for any matches for the name in bdo
-    bdoMatches = get_close_matches(search.upper(), bdoMembers)
-    matches.extend(bdoMatches)
+    matches += get_close_matches(search.upper(), bdoMembers)
 
     # Base case
     if not search.upper() in matches:
@@ -467,37 +503,28 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     resultFound = False
 
     # Search database against matches
-    for member in dbMembers:
-        dis = dbMembers[member]['Discord']
-        bdo = dbMembers[member]['Family']
-        if dis.split("#")[0].upper() in matches or bdo.upper() in matches:
+    for key, val in dbMembers.items():
+        member = Member(val)
+        matchedAccounts = set(member.accounts) & set(matches)
+        if member.shortDiscord.upper() in matches or matchedAccounts:
             resultFound = True
-            msg += "\n\n--------------------------------------------\n"
+            msg += "\n\n--------------------------------------------"
             if alt:
-                msg += dis + " [" + bdo + "]"
+                for match in matchedAccounts:
+                    msg += "\n" + member.discord + " [" + match + "]"
             else:
-                msg += "Discord:      [" + dis + "]\n" + "BDO Family:   [" + bdo + "]"
-                mem = ser.get_member_named(dis.split("#")[0])
+                accounts = member.accounts
+                msg += "\nDiscord:      [" + member.discord + "]\n" + "BDO Family:   [" + accounts.pop() + "]"
+                for match in accounts:
+                    msg += "\n              [" + match + "]"
+                mem = ser.get_member_named(member.shortDiscord)
                 if mem != None and mem.nick != None:
                     msg += "\nNickname:     [" + mem.nick + "]"
-                if group == "Members":
-                    adder = None
-                    try:
-                        adder = dbMembers[member]['AddedBy']
-                    except:
-                        print("No Adder")
-                    dateAdded = dbMembers[member]['DateAdded']
-                    dateAdded /= 1000
-                    if not adder == None:
-                        msg += "\nAdded By:     [" + adder + "]"
-                    if not dateAdded == None:
-                        msg += "\nDate Added:   [" + datetime.fromtimestamp(dateAdded).strftime('%Y-%m-%d') + "]"
-                elif group == "Alumni":
-                    remover = dbMembers[member]['RemovedBy']
-                    dateRemoved = dbMembers[member]['DateRemoved']
-                    dateRemoved /= 1000
-                    msg += "\nRemoved By:   [" + remover + "]"
-                    msg += "\nDate Removed: [" + datetime.fromtimestamp(dateRemoved).strftime('%Y-%m-%d') + "]"
+                msg += "\nAdded By:     [" + member.addedBy + "]"
+                msg += "\nDate Added:   [" + member.dateAdded + "]"
+                if group == "Alumni":
+                    msg += "\nRemoved By:   [" + member.removedBy + "]"
+                    msg += "\nDate Removed: [" + member.dateRemoved + "]"
             msg += "\n--------------------------------------------"
 
     # Final messages
@@ -514,12 +541,14 @@ async def getGuildList(ch, ser):
     members = ref.child('Members').get()
     guildList = {}
     msg = ""
-    for member in members:
-        info = [members[member]['Discord']]
-        dName = ser.get_member_named(members[member]['Discord'])
+    for id, m in members.items():
+        member = Member(m)
+        info = [member.discord]
+        dName = ser.get_member_named(member.discord)
         if dName != None and dName.nick != None:
             info.append(dName.nick)
-        guildList[members[member]['Family']] = info
+        for account in member.accounts:
+            guildList[account] = info
     guildList = collections.OrderedDict(sorted(guildList.items()))
     i = 1
     for k, v in guildList.items():
@@ -539,8 +568,9 @@ async def getDiscordMissing(ch, ser):
     # Get all bdo members from firebase
     dNameMembers = {}
     print("Getting firbase members")
-    for member in members:
-        dNameMembers[members[member]['Discord']] = members[member]['Family']
+    for id, m in members.items():
+        member = Member(m)
+        dNameMembers[m.discord] = m.accounts
 
     # Get all hooligans from discord
     hooligans = []
@@ -578,7 +608,10 @@ async def getDiscordMissing(ch, ser):
         msg = ''
         for member in bdoMissing:
             msg += member + '\r\n'
-            msg += '\t\tFamily Name: ' + dNameMembers[member] + '\r\n'
+            accounts = dNameMembers[member]
+            msg += '\t\tFamily Name: ' + accounts.pop() + '\r\n'
+            for account in accounts:
+                msg += '\t\t             ' + account + '\r\n'
         print("Writing")
         with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
             f.write(msg)

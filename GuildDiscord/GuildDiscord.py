@@ -25,6 +25,7 @@ cred = credentials.Certificate(dir_path + '/risen-59032-ffc0d0af3cc4.json')
 default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen-59032.firebaseio.com/'})
 ref = db.reference('Guild')
 prefix = '&'
+risenServer = None
 
 # File to check if still available to complete missions or not
 if not stateFileExists:
@@ -67,8 +68,10 @@ guildRoles = {
 
 @client.event
 async def on_ready():
+    global risenServer
     print("The bot is ready!")
     await client.send_message(client.get_channel("259049604627169291"), "Online!")
+    risenServer = client.get_server('474229539636248596')
     if not okToRun:
         await client.change_presence(game=discord.Game(name="Unavailable"))
     else:
@@ -136,6 +139,7 @@ async def on_message(message):
         #for channel in channels:
         #    msg += channel.id + ":\t" + channel.name + "\n"
         #await client.send_message(client.get_channel("259049604627169291"), msg)
+        await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
         await client.send_message(message.channel, "pong!")
 
     # Help!
@@ -326,6 +330,7 @@ async def showHelp(ch):
 
 # Adds an entry to the database
 async def addGuildie(dName, bName, ch, ser, adder):
+    ser = risenServer
     dName = dName.replace('@', '')
     closeRef = ref.child('Members')
     dMem = ser.get_member_named(dName)
@@ -461,7 +466,9 @@ async def updateGuildie(dName, bName, ch, sender):
 
 # Search for a member in discord and bdo family
 async def searchMembers(search, ch, ser, alt=False, group="Members"):
+    global risenServer
     print("Searching for guildie through both discord and bdo")
+    ser = risenServer
     await client.send_typing(ch)
 
     # In case given discriminator
@@ -480,7 +487,7 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     bdoMembers = []
     for key, val in dbMembers.items():
         member = Member(val)
-        bdoMembers += member.accounts
+        bdoMembers += (x.upper() for x in member.accounts)
 
     matches = []
     # Check for any matches for the name in discord
@@ -489,10 +496,11 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
         dis = ser.get_member_named(match)
         if dis != None and not dis.name.upper() in discordMatches:
             discordMatches.append(dis.name.upper())
-    matches.extend(discordMatches)
+    matches = discordMatches
 
     # Check for any matches for the name in bdo
     matches += get_close_matches(search.upper(), bdoMembers)
+    print(matches)
 
     # Base case
     if not search.upper() in matches:
@@ -505,8 +513,9 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     # Search database against matches
     for key, val in dbMembers.items():
         member = Member(val)
-        matchedAccounts = set(member.accounts) & set(matches)
-        if member.shortDiscord.upper() in matches or matchedAccounts:
+        upperAccounts = (x.upper() for x in member.accounts)
+        matchedAccounts = set(upperAccounts) & set(matches)
+        if member.discord.upper() in matches or matchedAccounts:
             resultFound = True
             msg += "\n\n--------------------------------------------"
             if alt:
@@ -537,6 +546,7 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
 
 # Get a list of current guild members!
 async def getGuildList(ch, ser):
+    ser = risenServer
     print("Getting list of guild members!")
     members = ref.child('Members').get()
     guildList = {}
@@ -563,6 +573,7 @@ async def getGuildList(ch, ser):
 # Gets the discrepencies in guild members
 async def getDiscordMissing(ch, ser):
     await client.send_typing(ch)
+    ser = risenServer
     members = ref.child('Members').get()
 
     # Get all bdo members from firebase

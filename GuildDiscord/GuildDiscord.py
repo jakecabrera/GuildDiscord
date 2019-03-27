@@ -139,8 +139,25 @@ async def on_message(message):
         #for channel in channels:
         #    msg += channel.id + ":\t" + channel.name + "\n"
         #await client.send_message(client.get_channel("259049604627169291"), msg)
-        await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
+        #await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
         await client.send_message(message.channel, "pong!")
+
+    #elif m.startswith(prefix + "FIX DATABASE"):
+    #    for key, m in ref.child('Members').get().items():
+    #        member = Member(m)
+    #        dMem = risenServer.get_member_named(member.discord)
+    #        if dMem != None:
+    #            ref.child('Members').child(key).child('discordID').set(dMem.id)
+    #        else:
+    #            ref.child('Members').child(key).child('discordID').set('')
+    #    for key, m in ref.child('Alumni').get().items():
+    #        member = Member(m)
+    #        dMem = risenServer.get_member_named(member.discord)
+    #        if dMem != None:
+    #            ref.child('Alumni').child(key).child('discordID').set(dMem.id)
+    #        else:
+    #            ref.child('Alumni').child(key).child('discordID').set('')
+    #    return
 
     # Help!
     elif m.startswith(prefix + "HELP"):
@@ -466,7 +483,6 @@ async def updateGuildie(dName, bName, ch, sender):
 
 # Search for a member in discord and bdo family
 async def searchMembers(search, ch, ser, alt=False, group="Members"):
-    global risenServer
     print("Searching for guildie through both discord and bdo")
     ser = risenServer
     await client.send_typing(ch)
@@ -515,12 +531,16 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
         member = Member(val)
         upperAccounts = (x.upper() for x in member.accounts)
         matchedAccounts = set(upperAccounts) & set(matches)
-        if member.discord.upper() in matches or matchedAccounts:
+        if member.shortDiscord.upper() in matches or matchedAccounts:
             resultFound = True
             msg += "\n\n--------------------------------------------"
             if alt:
                 for match in matchedAccounts:
-                    msg += "\n" + member.discord + " [" + match + "]"
+                    matchedAccount = ""
+                    for a in member.accounts:
+                        if a.upper() == match:
+                            matchedAccount = a
+                    msg += "\n" + member.discord + " [" + matchedAccount + "]"
             else:
                 accounts = member.accounts
                 msg += "\nDiscord:      [" + member.discord + "]\n" + "BDO Family:   [" + accounts.pop() + "]"
@@ -581,7 +601,7 @@ async def getDiscordMissing(ch, ser):
     print("Getting firbase members")
     for id, m in members.items():
         member = Member(m)
-        dNameMembers[m.discord] = m.accounts
+        dNameMembers[member.discord] = member.accounts
 
     # Get all hooligans from discord
     hooligans = []
@@ -618,7 +638,10 @@ async def getDiscordMissing(ch, ser):
     if len(bdoMissing) > 0:
         msg = ''
         for member in bdoMissing:
-            msg += member + '\r\n'
+            name = member
+            if name == "":
+                name = "NO_DISCORD_NAME_FOUND"
+            msg += name + '\r\n'
             accounts = dNameMembers[member]
             msg += '\t\tFamily Name: ' + accounts.pop() + '\r\n'
             for account in accounts:

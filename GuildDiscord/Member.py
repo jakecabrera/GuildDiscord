@@ -16,6 +16,7 @@ class Member:
         self.addedBy = dbMem['AddedBy']
         self.dateAddedNumeric = dbMem['DateAdded'] / 1000
         self.dateAdded = datetime.fromtimestamp(self.dateAddedNumeric).strftime('%Y-%m-%d')
+        self.id = dbMem['discordID']
         if 'DateRemoved' in dbMem:
             self.dateRemovedNumeric = dbMem['DateRemoved'] / 1000
             self.dateRemoved = datetime.fromtimestamp(self.dateRemovedNumeric).strftime('%Y-%m-%d')

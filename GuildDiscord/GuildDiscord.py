@@ -368,6 +368,10 @@ async def addGuildie(dName, bName, ch, ser, adder):
     member.child("Discord").set(dName)
     member.child("Accounts").push(bName)
     member.child("AddedBy").set(adder)
+    memID = ''
+    if dMem != None:
+        memID = dMem.id
+    member.child("discordID").set(memID)
     member.child("DateAdded").set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
     await client.send_message(ch, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
@@ -491,12 +495,12 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     search = search.split("#")[0]
 
     # Get current discord names
-    discordMembers = []
-    nicks = []
+    discordMembers = {}
+    nicks = {}
     for mem in ser.members:
-        discordMembers.append(mem.name.upper())
+        discordMembers[mem.name.upper() + "#" + mem.discriminator] = mem
         if mem.nick != None:
-            nicks.append(mem.nick)
+            nicks[mem.nick.upper()] = mem
 
     # Get database members
     dbMembers = ref.child(group).get()
@@ -505,22 +509,25 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
         member = Member(val)
         bdoMembers += (x.upper() for x in member.accounts)
 
-    matches = []
+    disMatches = []
     # Check for any matches for the name in discord
-    discordMatches = get_close_matches(search.upper(), discordMembers) 
-    for match in get_close_matches(search, nicks):
-        dis = ser.get_member_named(match)
-        if dis != None and not dis.name.upper() in discordMatches:
-            discordMatches.append(dis.name.upper())
-    matches = discordMatches
+    discordMatches = get_close_matches(search.upper(), (x.split("#")[0] for x in list(discordMembers.keys())))
+    nickMatches = get_close_matches(search.upper(), list(nicks.keys()))
+    for k, v in discordMembers.items():
+        if k.split('#')[0] in discordMatches:
+            disMatches.append(v.id)
+    for k, v in nicks.items():
+        if k in nickMatches and not v.id in disMatches:
+            disMatches.append(v.id)
 
     # Check for any matches for the name in bdo
-    matches += get_close_matches(search.upper(), bdoMembers)
-    print(matches)
+    bdoMatches = get_close_matches(search.upper(), bdoMembers)
+    print(disMatches)
+    print(bdoMatches)
 
-    # Base case
-    if not search.upper() in matches:
-        matches.append(search.upper())
+    ## Base case
+    #if not search.upper() in matches:
+    #    matches.append(search.upper())
 
     # Begin output message
     msg = "Results for  [" + search + "]:"
@@ -530,8 +537,8 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
     for key, val in dbMembers.items():
         member = Member(val)
         upperAccounts = (x.upper() for x in member.accounts)
-        matchedAccounts = set(upperAccounts) & set(matches)
-        if member.shortDiscord.upper() in matches or matchedAccounts:
+        matchedAccounts = set(upperAccounts) & set(bdoMatches)
+        if member.id in disMatches or matchedAccounts or member.shortDiscord.upper() in discordMatches:
             resultFound = True
             msg += "\n\n--------------------------------------------"
             if alt:
@@ -543,10 +550,13 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
                     msg += "\n" + member.discord + " [" + matchedAccount + "]"
             else:
                 accounts = member.accounts
-                msg += "\nDiscord:      [" + member.discord + "]\n" + "BDO Family:   [" + accounts.pop() + "]"
+                mem = ser.get_member(member.id)
+                memberDiscord = member.discord
+                if mem != None:
+                    memberDiscord = mem.name + '#' + mem.discriminator
+                msg += "\nDiscord:      [" + memberDiscord + "]\n" + "BDO Family:   [" + accounts.pop() + "]"
                 for match in accounts:
                     msg += "\n              [" + match + "]"
-                mem = ser.get_member_named(member.shortDiscord)
                 if mem != None and mem.nick != None:
                     msg += "\nNickname:     [" + mem.nick + "]"
                 msg += "\nAdded By:     [" + member.addedBy + "]"
@@ -574,7 +584,7 @@ async def getGuildList(ch, ser):
     for id, m in members.items():
         member = Member(m)
         info = [member.discord]
-        dName = ser.get_member_named(member.discord)
+        dName = ser.get_member(member.id)
         if dName != None and dName.nick != None:
             info.append(dName.nick)
         for account in member.accounts:

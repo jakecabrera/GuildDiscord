@@ -15,7 +15,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
-from Member import Member
+import MemberModule
+from MemberModule import Member
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 stateFileExists = Path(dir_path + '/state').is_file()
@@ -143,20 +144,10 @@ async def on_message(message):
         await client.send_message(message.channel, "pong!")
 
     #elif m.startswith(prefix + "FIX DATABASE"):
-    #    for key, m in ref.child('Members').get().items():
-    #        member = Member(m)
-    #        dMem = risenServer.get_member_named(member.discord)
-    #        if dMem != None:
-    #            ref.child('Members').child(key).child('discordID').set(dMem.id)
-    #        else:
-    #            ref.child('Members').child(key).child('discordID').set('')
-    #    for key, m in ref.child('Alumni').get().items():
-    #        member = Member(m)
-    #        dMem = risenServer.get_member_named(member.discord)
-    #        if dMem != None:
-    #            ref.child('Alumni').child(key).child('discordID').set(dMem.id)
-    #        else:
-    #            ref.child('Alumni').child(key).child('discordID').set('')
+    #    for k, v in ref.child('Members').get().items():
+    #        ref.child('Members').child(k).child('discordID').delete()
+    #    for k, v in ref.child('Alumni').get().items():
+    #        ref.child('Alumni').child(k).child('discordID').delete()
     #    return
 
     # Help!
@@ -295,7 +286,7 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await searchMembers(mesg[i:], message.channel, message.server, alt, "Alumni")
+            await searchMembers(mesg[i:], message.channel, message.server, alt, MemberModule.ALUMNI)
 
     else:
         return
@@ -349,30 +340,30 @@ async def showHelp(ch):
 async def addGuildie(dName, bName, ch, ser, adder):
     ser = risenServer
     dName = dName.replace('@', '')
-    closeRef = ref.child('Members')
+    closeRef = ref.child(MemberModule.MEMBERS)
     dMem = ser.get_member_named(dName)
     if dMem == None:
         await client.send_message(ch, cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
-    for key, val in ref.child('Members').get().items():
+    for key, val in ref.child(MemberModule.MEMBERS).get().items():
         member = Member(val)
         if member.hasAccount(bName):
             print("Member already exists")
             await client.send_message(ch, cssMessage("Member already exists with that Family name"))
             return
         elif (dName != "" and member.discord == dName):
-            closeRef.child(key).child('Accounts').push(bName)
+            closeRef.child(key).child(MemberModule.ACCOUNTS).push(bName)
             await client.send_message(ch, cssMessage("Member already exists with that Discord name." +
                                                      "\nAppending to [" + member.discord + "] as an alternate account"))
             return
     member = closeRef.push()
-    member.child("Discord").set(dName)
-    member.child("Accounts").push(bName)
-    member.child("AddedBy").set(adder)
+    member.child(MemberModule.DISCORD).set(dName)
+    member.child(MemberModule.ACCOUNTS).push(bName)
+    member.child(MemberModule.ADDEDBY).set(adder)
     memID = ''
     if dMem != None:
         memID = dMem.id
-    member.child("discordID").set(memID)
-    member.child("DateAdded").set({".sv": "timestamp"})
+    member.child(MemberModule.DISCORDID).set(memID)
+    member.child(MemberModule.DATEADDED).set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
     await client.send_message(ch, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
@@ -398,16 +389,16 @@ async def removeGuildie(dName, bName, ch, ser, remover):
         dName = ""
     dName = dName.replace('@', '')
     removedSomeone = False
-    for key, val in ref.child('Members').get().items():
+    for key, val in ref.child(MemberModule.MEMBERS).get().items():
         member = Member(val)
         if member.hasAccount(bName) or (dName != "" and member.discord.upper() == dName.upper()):
             print("Removing [" + bName + "] = [" + member.discord + "]")
             dName = member.discord
             bNames = member.accounts
-            ref.child('Alumni').child(key).set(ref.child('Members').child(key).get())
-            ref.child('Alumni').child(key).child('RemovedBy').set(remover)    
-            ref.child('Alumni').child(key).child("DateRemoved").set({".sv": "timestamp"})
-            ref.child('Members').child(key).delete()
+            ref.child(MemberModule.ALUMNI).child(key).set(ref.child('Members').child(key).get())
+            ref.child(MemberModule.ALUMNI).child(key).child('RemovedBy').set(remover)    
+            ref.child(MemberModule.ALUMNI).child(key).child("DateRemoved").set({".sv": "timestamp"})
+            ref.child(MemberModule.MEMBERS).child(key).delete()
             removedSomeone = True
             removeMsg = "Removed Discord: [" + dName + "]\n\t BDO Family: [" + bNames.pop() + "]"
             for n in bNames:
@@ -437,17 +428,17 @@ async def updateGuildie(dName, bName, ch, sender):
     print(dName)
     print(bName)
     updatedSomeone = False
-    for key, val in ref.child('Members').get().items():
+    for key, val in ref.child(MemberModule.MEMBERS).get().items():
         member = Member(val)
         if member.hasAccount(bName):
             oldDiscord = member.discord
-            ref.child('Members').child(key).update({'Discord': dName})
+            ref.child(MemberModule.MEMBERS).child(key).update({MemberModule.DISCORD: dName})
             updatedSomeone = True
             await client.send_message(ch, cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
         elif member.discord == dName and member.discord != "":
             if len(member.accounts) == 1:
                 oldName = member.accounts[0]
-                ref.child('Members').child(key).child('Accounts').child(list(ref.child('Members').child(key).child('Accounts').get().keys()).pop()).set(bName)
+                ref.child(MemberModule.MEMBERS).child(key).child(MemberModule.ACCOUNTS).child(list(ref.child(MemberModule.MEMBERS).child(key).child(MemberModule.ACCOUNTS).get().keys()).pop()).set(bName)
                 updatedSomeone = True
                 await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
             else:
@@ -472,10 +463,10 @@ async def updateGuildie(dName, bName, ch, sender):
                             await client.send_message(ch, cssMessage("Cancelling update operation."))
                             return
                         choice -= 1
-                        for id, acc in val['Accounts'].items():
+                        for id, acc in val[MemberModule.ACCOUNTS].items():
                             if acc == member.accounts[choice]:
                                 oldName = member.accounts[choice]
-                                ref.child('Members').child(key).child('Accounts').child(id).set(bName)
+                                ref.child(MemberModule.MEMBERS).child(key).child(MemberModule.ACCOUNTS).child(id).set(bName)
                                 updatedSomeone = True
                                 await client.send_message(ch, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
                                 valid = True
@@ -486,7 +477,7 @@ async def updateGuildie(dName, bName, ch, sender):
     await client.send_message(ch, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
 # Search for a member in discord and bdo family
-async def searchMembers(search, ch, ser, alt=False, group="Members"):
+async def searchMembers(search, ch, ser, alt=False, group=MemberModule.MEMBERS):
     print("Searching for guildie through both discord and bdo")
     ser = risenServer
     await client.send_typing(ch)
@@ -578,7 +569,7 @@ async def searchMembers(search, ch, ser, alt=False, group="Members"):
 async def getGuildList(ch, ser):
     ser = risenServer
     print("Getting list of guild members!")
-    members = ref.child('Members').get()
+    members = ref.child(MemberModule.MEMBERS).get()
     guildList = {}
     msg = ""
     for id, m in members.items():
@@ -604,7 +595,7 @@ async def getGuildList(ch, ser):
 async def getDiscordMissing(ch, ser):
     await client.send_typing(ch)
     ser = risenServer
-    members = ref.child('Members').get()
+    members = ref.child(MemberModule.MEMBERS).get()
 
     # Get all bdo members from firebase
     dNameMembers = {}

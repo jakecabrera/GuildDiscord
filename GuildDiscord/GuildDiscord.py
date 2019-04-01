@@ -17,6 +17,7 @@ from firebase_admin import db
 
 import MemberModule
 from MemberModule import Member
+from GuildModule import Guild
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 stateFileExists = Path(dir_path + '/state').is_file()
@@ -27,6 +28,7 @@ default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen
 ref = db.reference('Guild')
 prefix = '&'
 risenServer = None
+guild = None
 
 # File to check if still available to complete missions or not
 if not stateFileExists:
@@ -70,9 +72,11 @@ guildRoles = {
 @client.event
 async def on_ready():
     global risenServer
+    global guild
     print("The bot is ready!")
     await client.send_message(client.get_channel("259049604627169291"), "Online!")
     risenServer = client.get_server('474229539636248596')
+    guild = Guild(client, ref, risenServer)
     if not okToRun:
         await client.change_presence(game=discord.Game(name="Unavailable"))
     else:
@@ -206,7 +210,8 @@ async def on_message(message):
             if not bdoResults == None:
                 bName = bdoResults.group()
             adder = message.author.name + "#" + message.author.discriminator
-            await addGuildie(dName, bName, message.channel, message.server, adder)
+            await guild.addGuildie(dName, bName, adder, message)
+            #await addGuildie(dName, bName, message.channel, message.server, adder)
 
     # Check if removing guildie
     if len(removePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -231,7 +236,8 @@ async def on_message(message):
             bdoResults = bdoNamePattern.search(x)
             if not bdoResults == None:
                 bName = bdoResults.group()
-            await removeGuildie(dName, bName, message.channel, message.server, remover)
+            await guild.removeGuildie(dName, bName, remover, message)
+            #await removeGuildie(dName, bName, message.channel, message.server, remover)
             
     # Check if updating guildie
     if len(updatePattern.findall(m)) > 0 and message.channel.id in databaseChannels:
@@ -247,7 +253,8 @@ async def on_message(message):
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
             bName = bdoNamePattern.search(x).group()
-            await updateGuildie(dName, bName, message.channel, message.author)
+            await guild.updateGuildie(dName, bName, message)
+            #await updateGuildie(dName, bName, message.channel, message.author)
 
     # Guild operations
     if m.startswith(prefix + "GUILD"):
@@ -264,11 +271,14 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await searchMembers(mesg[i:], message.channel, message.server, alt)
+            await guild.searchMembers(mesg[i:], message, alt=alt)
+            #await searchMembers(mesg[i:], message.channel, message.server, alt)
         if m.startswith("LIST"):
-            await getGuildList(message.channel, message.server)
+            await guild.getGuildList(message)
+            #await getGuildList(message.channel, message.server)
         if m.startswith("GET MISSING"):
-            await getDiscordMissing(message.channel, message.server)
+            await guild.getDiscordMissing(message)
+            #await getDiscordMissing(message.channel, message.server)
         print("End Guild Ops")
 
     # Alumni operations
@@ -286,7 +296,8 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await searchMembers(mesg[i:], message.channel, message.server, alt, MemberModule.ALUMNI)
+            await guild.searchMembers(mesg[i:], message, group=MemberModule.ALUMNI, alt=alt)
+            #await searchMembers(mesg[i:], message.channel, message.server, alt, MemberModule.ALUMNI)
 
     else:
         return
@@ -362,8 +373,8 @@ async def addGuildie(dName, bName, ch, ser, adder):
     memID = ''
     if dMem != None:
         memID = dMem.id
-    member.child(MemberModule.DISCORDID).set(memID)
-    member.child(MemberModule.DATEADDED).set({".sv": "timestamp"})
+    member.child(MemberModule.DISCORD_ID).set(memID)
+    member.child(MemberModule.DATE_ADDED).set({".sv": "timestamp"})
     print("Added dName: [" + dName + "]\t[" + bName + "]")
     await client.send_message(ch, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 

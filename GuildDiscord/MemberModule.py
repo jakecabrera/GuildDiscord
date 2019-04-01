@@ -11,36 +11,27 @@ from datetime import datetime
 ACCOUNTS = 'Accounts'
 ADDEDBY = 'AddedBy'
 ALUMNI = 'Alumni'
-DATEADDED = 'DateAdded'
-DATEREMOVED = 'DateRemoved'
+DATE_ADDED = 'DateAdded'
+DATE_REMOVED = 'DateRemoved'
 DISCORD = 'Discord'
-DISCORDID = 'DiscordID'
+DISCORD_ID = 'DiscordID'
 MEMBERS = 'Members'
-REMOVEDBY = 'RemovedBy'
+REMOVED_BY = 'RemovedBy'
 
 class Member:
-    ACCOUNTS = 'Accounts'
-    ADDEDBY = 'AddedBy'
-    ALUMNI = 'Alumni'
-    DATEADDED = 'DateAdded'
-    DATEREMOVED = 'DateRemoved'
-    DISCORD = 'Discord'
-    DISCORDID = 'DiscordID'
-    MEMBERS = 'Members'
-    REMOVEDBY = 'RemovedBy'
 
     def __init__(self, dbMem):
         self.discord = dbMem[DISCORD]
         self.shortDiscord = self.discord.split("#")[0]
         self.accounts = list(dbMem[ACCOUNTS].values())
         self.addedBy = dbMem[ADDEDBY]
-        self.dateAddedNumeric = dbMem[DATEADDED] / 1000
+        self.dateAddedNumeric = dbMem[DATE_ADDED] / 1000
         self.dateAdded = datetime.fromtimestamp(self.dateAddedNumeric).strftime('%Y-%m-%d')
-        self.id = dbMem[DISCORDID]
-        if DATEREMOVED in dbMem:
-            self.dateRemovedNumeric = dbMem[DATEREMOVED] / 1000
+        self.id = dbMem[DISCORD_ID]
+        if DATE_REMOVED in dbMem:
+            self.dateRemovedNumeric = dbMem[DATE_REMOVED] / 1000
             self.dateRemoved = datetime.fromtimestamp(self.dateRemovedNumeric).strftime('%Y-%m-%d')
-            self.removedBy = dbMem[REMOVEDBY]
+            self.removedBy = dbMem[REMOVED_BY]
         else:
             self.dateRemovedNumeric = None
             self.dateRemoved = None

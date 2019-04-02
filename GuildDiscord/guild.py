@@ -66,25 +66,25 @@ class Guild:
         if dMem == None:
             await client.send_message(message.channel, cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
         for key, val in ref.child(member.MEMBERS).get().items():
-            member = Member(val)
-            if member.hasAccount(bName):
+            mem = Member(val)
+            if mem.hasAccount(bName):
                 print("Member already exists")
                 await client.send_message(message.channel, cssMessage("Member already exists with that Family name"))
                 return
-            elif (dName != "" and member.discord == dName):
-                closeRef.child(key).child(member.ACCOUNTS).push(bName)
+            elif (dName != "" and mem.discord == dName):
+                closeRef.child(key).child(mem.ACCOUNTS).push(bName)
                 await client.send_message(message.channel, cssMessage("Member already exists with that Discord name." +
-                                                         "\nAppending to [" + member.discord + "] as an alternate account"))
+                                                         "\nAppending to [" + mem.discord + "] as an alternate account"))
                 return
-        member = closeRef.push()
-        member.child(member.DISCORD).set(dName)
-        member.child(member.ACCOUNTS).push(bName)
-        member.child(member.ADDEDBY).set(adder)
+        mem = closeRef.push()
+        mem.child(member.DISCORD).set(dName)
+        mem.child(member.ACCOUNTS).push(bName)
+        mem.child(member.ADDEDBY).set(adder)
         memID = ''
         if dMem != None:
             memID = dMem.id
-        member.child(member.DISCORD_ID).set(memID)
-        member.child(member.DATE_ADDED).set({".sv": "timestamp"})
+        mem.child(member.DISCORD_ID).set(memID)
+        mem.child(member.DATE_ADDED).set({".sv": "timestamp"})
         print("Added dName: [" + dName + "]\t[" + bName + "]")
         await client.send_message(message.channel, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
@@ -112,11 +112,11 @@ class Guild:
         dName = dName.replace('@', '')
         removedSomeone = False
         for key, val in ref.child(member.MEMBERS).get().items():
-            member = Member(val)
-            if member.hasAccount(bName) or (dName != "" and member.discord.upper() == dName.upper()):
-                print("Removing [" + bName + "] = [" + member.discord + "]")
-                dName = member.discord
-                bNames = member.accounts
+            mem = Member(val)
+            if mem.hasAccount(bName) or (dName != "" and mem.discord.upper() == dName.upper()):
+                print("Removing [" + bName + "] = [" + mem.discord + "]")
+                dName = mem.discord
+                bNames = mem.accounts
                 ref.child(member.ALUMNI).child(key).set(ref.child('Members').child(key).get())
                 ref.child(member.ALUMNI).child(key).child('RemovedBy').set(remover)    
                 ref.child(member.ALUMNI).child(key).child("DateRemoved").set({".sv": "timestamp"})

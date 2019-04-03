@@ -21,6 +21,9 @@ from member import Member
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+# Gotta remove this. It's in multiple files
+prefix = '&'
+
 AUTHORIZED_CHANNELS = {
     "259049604627169291", # Private test channel
     "517203484467134484" # ops channel
@@ -72,7 +75,7 @@ class Guild:
                 await client.send_message(message.channel, cssMessage("Member already exists with that Family name"))
                 return
             elif (dName != "" and mem.discord == dName):
-                closeRef.child(key).child(mem.ACCOUNTS).push(bName)
+                closeRef.child(key).child(member.ACCOUNTS).push(bName)
                 await client.send_message(message.channel, cssMessage("Member already exists with that Discord name." +
                                                          "\nAppending to [" + mem.discord + "] as an alternate account"))
                 return

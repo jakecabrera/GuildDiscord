@@ -56,6 +56,15 @@ async def on_ready():
         await client.change_presence(game=discord.Game(name="Available"))
 
 @client.event
+async def on_member_remove(member):
+    if not "474242123143577610" in (channel.id for channel in member.server.channels):
+        return
+    msg = member.top_role.name + " " + member.name + "#" + member.discriminator + " has left the server."
+    msg = msg.replace('@everyone ', '')
+    print(msg)
+    await client.send_message(client.get_channel("474242123143577610"), cssMessage(msg))
+
+@client.event
 async def on_message(message):
     global okToRun
 

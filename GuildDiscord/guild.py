@@ -67,6 +67,8 @@ class Guild:
         dMem = server.get_member_named(dName)
         if dMem == None:
             await client.send_message(message.channel, Guild.cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
+
+        # Check if member already exists
         for key, val in ref.child(member.MEMBERS).get().items():
             mem = Member(val)
             if mem.hasAccount(bName):
@@ -78,6 +80,29 @@ class Guild:
                 await client.send_message(message.channel, Guild.cssMessage("Member already exists with that Discord name." +
                                                          "\nAppending to [" + mem.discord + "] as an alternate account"))
                 return
+
+        # Check if member had been in the guild before (Alumni)
+        for key, val in ref.child(member.ALUMNI).get().items():
+            alum = Member(val)
+            if alum.hasAccount(bName) or (dName != '' and dName == alum.discord):
+                print("Member used to be in guild")
+                closeRef.child(key).set(ref.child(member.ALUMNI).child(key).get())
+                mem = closeRef.child(key)
+                if not alum.hasAccount(bName):
+                    mem.child(member.ACCOUNTS).push(bName)
+                setName = False
+                if dMem != None:
+                    mem.child(member.DISCORD_ID).set(dMem.id)
+                    mem.child(member.DISCORD).set(dMem.name + "#" + dMem.discriminator)
+                    setName = True
+                if (not setName) and dName != '' and dName != alum.discord:
+                    mem.child(member.DISCORD).set(dName)
+                mem.child(member.DATE_ADDED).set({".sv": "timestamp"})
+                mem.child(member.ADDEDBY).set(adder)
+                print("Added dName: [" + dName + "]\t[" + bName + "]")
+                await client.send_message(message.channel, Guild.cssMessage("Welcome back " + dName + "!\n Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+                return
+
         mem = closeRef.push()
         mem.child(member.DISCORD).set(dName)
         mem.child(member.ACCOUNTS).push(bName)
@@ -285,7 +310,7 @@ class Guild:
                 msg += "\n\n--------------------------------------------"
                 if alt:
                     # Get discord name
-                    disMem = server.get_member(mem.id)
+                    disMem = client.get_user_info(mem.id)
                     disPrint = mem.discord
                     if disMem != None:
                         disPrint = disMem.name + "#" + disMem.discriminator

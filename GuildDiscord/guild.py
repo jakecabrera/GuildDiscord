@@ -21,41 +21,40 @@ from member import Member
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-# Gotta remove this. It's in multiple files
-prefix = '&'
-
-AUTHORIZED_CHANNELS = {
-    "259049604627169291", # Private test channel
-    "517203484467134484" # ops channel
-    }
-
-DATABASE_CHANNELS = {
-    "474242123143577610", # Add-and-remove
-    "259049604627169291" # Private test channel
-    }
-
-AUTHORIZED_ROLES = {
-    "539836157656301570", # Leadership
-    "513372116519878716", # Role from my test server
-    "474234873763201026", # Senpai notice me
-    "474235266190540800", # Risen officer
-    }
-
-SARGE = "247195865989513217" # That's me!!! o/
-HOOLIGANS = "474236074017685506"
-GUILD_ROLES = {
-    "539836157656301570", # Leadership
-    HOOLIGANS,
-    "474234873763201026", # Senpai Notice Me
-    "474235266190540800", # Officer
-    "475010938148225036" # Lead vegan dev
-    }
-
 class Guild:
     def __init__(self, client, ref, server):
         self.server = server
         self.client = client
         self.ref = ref
+
+    prefix = '&'
+
+    AUTHORIZED_CHANNELS = {
+        "test": "259049604627169291", # Private test channel
+        "ops": "517203484467134484" # ops channel
+        }
+
+    DATABASE_CHANNELS = {
+        "addAndRemove": "474242123143577610", # Add-and-remove
+        "test": "259049604627169291" # Private test channel
+        }
+
+    AUTHORIZED_ROLES = {
+        "539836157656301570", # Leadership
+        "513372116519878716", # Role from my test server
+        "474234873763201026", # Senpai notice me
+        "474235266190540800", # Risen officer
+        }
+
+    SARGE = "247195865989513217" # That's me!!! o/
+    HOOLIGANS = "474236074017685506"
+    GUILD_ROLES = {
+        "539836157656301570", # Leadership
+        HOOLIGANS,
+        "474234873763201026", # Senpai Notice Me
+        "474235266190540800", # Officer
+        "475010938148225036" # Lead vegan dev
+        }
 
     # Adds an entry to the database
     async def addGuildie(self, dName, bName, adder, message, server = None):
@@ -416,25 +415,25 @@ class Guild:
             await client.send_message(message.channel, cssMessage("All members accounted for!"))
         return
 
-# returns a string that is styled in css way for discord
-def cssMessage(msg):
-    return "```CSS\n" + msg + "\n```"
+    # returns a string that is styled in css way for discord
+    def cssMessage(msg):
+        return "```CSS\n" + msg + "\n```"
 
-# returns whether the given channel is an authorized channel or not
-def isAuthorizedChannel(ch):
-    return ch.id in AUTHORIZED_CHANNELS
+    # returns whether the given channel is an authorized channel or not
+    def isAuthorizedChannel(ch):
+        return ch.id in Guild.AUTHORIZED_CHANNELS.values()
 
-# Returns whether the given channel is a database channel or not
-def isDatabaseChannel(ch):
-    return ch.id in DATABASE_CHANNELS
+    # Returns whether the given channel is a database channel or not
+    def isDatabaseChannel(ch):
+        return ch.id in Guild.DATABASE_CHANNELS.values()
 
-# Returns whether the given role is a role that guild members would have
-def isGuildRole(role):
-    return role.id in GUILD_ROLES
+    # Returns whether the given role is a role that guild members would have
+    def isGuildRole(role):
+        return role.id in Guild.GUILD_ROLES
 
-# Returns whether the given user is a valid user for secret commands
-def isValidUser(user):
-    for role in AUTHORIZED_ROLES:
-        if role in [r.id for r in user.roles]:
-            return True
-    return False
+    # Returns whether the given user is a valid user for secret commands
+    def isValidUser(user):
+        for role in Guild.AUTHORIZED_ROLES:
+            if role in [r.id for r in user.roles]:
+                return True
+        return False

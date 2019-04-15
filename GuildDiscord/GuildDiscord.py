@@ -25,7 +25,6 @@ client = discord.Client()
 cred = credentials.Certificate(dir_path + '/risen-59032-ffc0d0af3cc4.json')
 default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen-59032.firebaseio.com/'})
 ref = db.reference('Guild')
-prefix = '&'
 risenServer = None
 risenGuild = None
 
@@ -47,7 +46,7 @@ async def on_ready():
     global risenServer
     global risenGuild
     print("The bot is ready!")
-    await client.send_message(client.get_channel("259049604627169291"), "Online!")
+    await client.send_message(client.get_channel(Guild.AUTHORIZED_CHANNELS['test']), "Online!")
     risenServer = client.get_server('474229539636248596')
     risenGuild = Guild(client, ref, risenServer)
     if not okToRun:
@@ -57,19 +56,19 @@ async def on_ready():
 
 @client.event
 async def on_member_remove(member):
-    if not "474242123143577610" in (channel.id for channel in member.server.channels):
+    if not risenServer.id == member.server.id:
         return
     msg = member.top_role.name + " " + member.name + "#" + member.discriminator + " has left the server."
     msg = msg.replace('@everyone ', '')
     print(msg)
-    await client.send_message(client.get_channel("474242123143577610"), cssMessage(msg))
+    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
 
 @client.event
 async def on_message(message):
     global okToRun
 
     # Return if the message is from unauthorized user
-    if message.author == client.user or not guild.isValidUser(message.author):
+    if message.author == client.user or not Guild.isValidUser(message.author):
         return
 
     m = message.content.upper()
@@ -81,29 +80,29 @@ async def on_message(message):
     addPattern = re.compile(r'<ADDED>.*\[.*\]')
     
     # Set State
-    if message.author.id == guild.SARGE and m.startswith(prefix + "STATE") and guild.isAuthorizedChannel(message.channel):
+    if message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "STATE") and Guild.isAuthorizedChannel(message.channel):
         args = m.split(" ")
         if args[1] == 'STOP' or args[1] == 'PAUSE':
             okToRun = False
             with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
                 for line in f:
                     print(line.replace('Available: True', 'Available: False'), end='')
-            await client.send_message(message.channel, cssMessage("Commands are no longer available"))
+            await client.send_message(message.channel,Guild.cssMessage("Commands are no longer available"))
             await client.change_presence(game=discord.Game(name="Unavailable"))
         elif args[1] == 'CONTINUE' or args[1] == 'START':
             okToRun = True
             with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
                 for line in f:
                     print(line.replace('Available: False', 'Available: True'), end='')
-            await client.send_message(message.channel, cssMessage("Commands are now available"))
+            await client.send_message(message.channel,Guild.cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
         print("okToRun changed to [" + str(okToRun) + "]")
 
     # Mission Commands
-    elif (m.startswith(prefix + "MISSION") or m.startswith(prefix + "MISSIONS")) and guild.isAuthorizedChannel(message.channel) and okToRun:    
+    elif (m.startswith(Guild.prefix + "MISSION") or m.startswith(Guild.prefix + "MISSIONS")) and Guild.isAuthorizedChannel(message.channel) and okToRun:    
         botOnline = ref.child('BotCommands').child('Online').get()
         if not botOnline:
-            await client.send_message(message.channel, cssMessage("The bot responsible for handling this request is not online right now."))
+            await client.send_message(message.channel,Guild.cssMessage("The bot responsible for handling this request is not online right now."))
             return
 
         args = m.split(" ")
@@ -114,7 +113,7 @@ async def on_message(message):
             startMission()
 
     # Ping Pong
-    elif m.startswith(prefix + "PING"):
+    elif m.startswith(Guild.prefix + "PING"):
         print("Ping!")
         #roles = message.server.roles
         #msg = ""
@@ -129,7 +128,7 @@ async def on_message(message):
         #await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
         await client.send_message(message.channel, "pong!")
 
-    #elif m.startswith(prefix + "FIX DATABASE"):
+    #elif m.startswith(Guild.prefix + "FIX DATABASE"):
     #    for k, v in ref.child('Members').get().items():
     #        ref.child('Members').child(k).child('discordID').delete()
     #    for k, v in ref.child('Alumni').get().items():
@@ -137,7 +136,7 @@ async def on_message(message):
     #    return
 
     # Help!
-    elif m.startswith(prefix + "HELP"):
+    elif m.startswith(Guild.prefix + "HELP"):
         print("Displaying Help Message...")
         await showHelp(message.channel)
 
@@ -158,13 +157,13 @@ async def on_message(message):
             "\n\nWith friendo, a lot of the times you won't know the bdo family name when friendoing. In those cases, omitting the bdo family name is **okay**. Like so:" +
             "\n<FRIENDO> sarge841#8833 []" 
             )
-        await client.send_message(message.channel,cssMessage(msg))
+        await client.send_message(message.channel,Guild.cssMessage(msg))
 
     elif m.startswith("=PAT"):
         time.sleep(2)
         await client.send_message(message.channel, "There there")
 
-    elif m.startswith(prefix + "SPOILER"):
+    elif m.startswith(Guild.prefix + "SPOILER"):
         c = message.content.split(" ")[1:]
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
@@ -172,7 +171,7 @@ async def on_message(message):
 
     # Guildie Tracker
     # Check if adding guildie
-    if len(addPattern.findall(m)) > 0 and guild.isDatabaseChannel(message.channel):
+    if len(addPattern.findall(m)) > 0 and Guild.isDatabaseChannel(message.channel):
         mesg = message.content
         for mention in message.mentions:
             mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
@@ -195,7 +194,7 @@ async def on_message(message):
             await risenGuild.addGuildie(dName, bName, adder, message)
 
     # Check if removing guildie
-    if len(removePattern.findall(m)) > 0 and guild.isDatabaseChannel(message.channel):
+    if len(removePattern.findall(m)) > 0 and Guild.isDatabaseChannel(message.channel):
         mesg = message.content
         for mention in message.mentions:
             mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
@@ -220,7 +219,7 @@ async def on_message(message):
             await risenGuild.removeGuildie(dName, bName, remover, message)
             
     # Check if updating guildie
-    if len(updatePattern.findall(m)) > 0 and guild.isDatabaseChannel(message.channel):
+    if len(updatePattern.findall(m)) > 0 and Guild.isDatabaseChannel(message.channel):
         print("Updating!")
         mesg = message.content
         for mention in message.mentions:
@@ -236,8 +235,8 @@ async def on_message(message):
             await risenGuild.updateGuildie(dName, bName, message)
 
     # Guild operations
-    if m.startswith(prefix + "GUILD"):
-        i = len(prefix + "GUILD ")
+    if m.startswith(Guild.prefix + "GUILD"):
+        i = len(Guild.prefix + "GUILD ")
         m = m[i:]
         if m.startswith("SEARCH"):
             mesg = message.content
@@ -258,8 +257,8 @@ async def on_message(message):
         print("End Guild Ops")
 
     # Alumni operations
-    if m.startswith(prefix + "ALUMNI"):
-        i = len(prefix + "ALUMNI ")
+    if m.startswith(Guild.prefix + "ALUMNI"):
+        i = len(Guild.prefix + "ALUMNI ")
         m = m[i:]
         if m.startswith("SEARCH"):
             mesg = message.content
@@ -280,9 +279,9 @@ async def finishMission(channel):
     alreadyQueued = ref.child('BotCommands').child('FinishMission').get()
 
     if alreadyQueued:
-        await client.send_message(channel, cssMessage("Already working on it!"))
+        await client.send_message(channel,Guild.cssMessage("Already working on it!"))
     else:
-        await client.send_message(channel, cssMessage("You got it! Finishing mission..."))
+        await client.send_message(channel,Guild.cssMessage("You got it! Finishing mission..."))
         ref.child('BotCommands').update({'FinishMission':True})
 
 # Resets mission to false
@@ -294,27 +293,23 @@ async def showHelp(ch):
     helpMessage = (
         "HELP WINDOW\n\n" +
         "# Ping:\n" +
-        "\t[" + prefix + "ping]\n\n" +
+        "\t[" + Guild.prefix + "ping]\n\n" +
         "# Guild Member Searching:\n" +
         "# To search by a guild members discord or bdo name use:\n" +
-        "\t[" + prefix + "guild search <NAME_GOES_HERE>]\n"
+        "\t[" + Guild.prefix + "guild search <NAME_GOES_HERE>]\n"
     )
-    if guild.isAuthorizedChannel(ch):
+    if Guild.isAuthorizedChannel(ch):
         helpMessage += (
             "# Add [-a] before the name for the above command for\n" + 
             "# something easier to copy for add-and-remove." +
             "\n\nSUPER SECRET OFFICER ONLY COMMANDS\n\n" +
             "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
-            "\t[" + prefix + "mission finish]\n" +
+            "\t[" + Guild.prefix + "mission finish]\n" +
             "# To get a list of mismatched named guild members:\n" +
-            "\t[" + prefix + "guild get missing]"
+            "\t[" + Guild.prefix + "guild get missing]"
             )
-    await client.send_message(ch, cssMessage(helpMessage))
+    await client.send_message(ch,Guild.cssMessage(helpMessage))
     return
-
-# returns a string that is styled in css way for discord
-def cssMessage(msg):
-    return "```CSS\n" + msg + "\n```"
 
 
 TOKEN = ""

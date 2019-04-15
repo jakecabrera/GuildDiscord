@@ -17,6 +17,7 @@ DISCORD = 'Discord'
 DISCORD_ID = 'DiscordID'
 MEMBERS = 'Members'
 REMOVED_BY = 'RemovedBy'
+TIMES_REMOVED = 'TimesRemoved'
 
 class Member:
 
@@ -32,6 +33,7 @@ class Member:
             self.dateRemovedNumeric = dbMem[DATE_REMOVED] / 1000
             self.dateRemoved = datetime.fromtimestamp(self.dateRemovedNumeric).strftime('%Y-%m-%d')
             self.removedBy = dbMem[REMOVED_BY]
+            self.timesRemoved = dbMem[TIMES_REMOVED]
         else:
             self.dateRemovedNumeric = None
             self.dateRemoved = None

@@ -66,16 +66,16 @@ class Guild:
         closeRef = ref.child(member.MEMBERS)
         dMem = server.get_member_named(dName)
         if dMem == None:
-            await client.send_message(message.channel, cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
+            await client.send_message(message.channel, Guild.cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
         for key, val in ref.child(member.MEMBERS).get().items():
             mem = Member(val)
             if mem.hasAccount(bName):
                 print("Member already exists")
-                await client.send_message(message.channel, cssMessage("Member already exists with that Family name"))
+                await client.send_message(message.channel, Guild.cssMessage("Member already exists with that Family name"))
                 return
             elif (dName != "" and mem.discord == dName):
                 closeRef.child(key).child(member.ACCOUNTS).push(bName)
-                await client.send_message(message.channel, cssMessage("Member already exists with that Discord name." +
+                await client.send_message(message.channel, Guild.cssMessage("Member already exists with that Discord name." +
                                                          "\nAppending to [" + mem.discord + "] as an alternate account"))
                 return
         mem = closeRef.push()
@@ -88,7 +88,7 @@ class Guild:
         mem.child(member.DISCORD_ID).set(memID)
         mem.child(member.DATE_ADDED).set({".sv": "timestamp"})
         print("Added dName: [" + dName + "]\t[" + bName + "]")
-        await client.send_message(message.channel, cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+        await client.send_message(message.channel, Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
         # Roles
         try:
@@ -119,19 +119,43 @@ class Guild:
                 print("Removing [" + bName + "] = [" + mem.discord + "]")
                 dName = mem.discord
                 bNames = mem.accounts
-                ref.child(member.ALUMNI).child(key).set(ref.child('Members').child(key).get())
-                ref.child(member.ALUMNI).child(key).child('RemovedBy').set(remover)    
-                ref.child(member.ALUMNI).child(key).child("DateRemoved").set({".sv": "timestamp"})
+
+                # Check if this person has already been removed
+                removedBefore = False
+                for aKey, aVal in ref.child(member.ALUMNI).get().items():
+                    alum = Member(aVal)
+                    if (mem.id != '' and mem.id == alum.id) or (mem.discord == alum.discord) or (set(mem.accounts) & set(alum.accounts)):
+                        removedBefore = True
+                        # This person was once an alumni
+                        combinedAccounts = alum.accounts + list(set(mem.accounts) - set(alum.accounts))
+                        ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).delete()
+                        for account in combinedAccounts:
+                            ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).push(account)
+                        if mem.id != '':
+                            if alum.id == '':
+                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD_ID).set(mem.id)
+                            if mem.discord != alum.discord:                                
+                                user = self.client.get_user_info(mem.id)
+                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD).set(user.name + '#' + user.discriminator)
+                        ref.child(member.ALUMNI).child(aKey).child(member.DATE_REMOVED).set({".sv": "timestamp"})
+                        ref.child(member.ALUMNI).child(aKey).child(member.REMOVED_BY).set(remover)
+                        ref.child(member.ALUMNI).child(aKey).child(member.TIMES_REMOVED).set(alum.timesRemoved + 1)
+                        break
+                if not removedBefore:        
+                    ref.child(member.ALUMNI).child(key).set(ref.child(member.MEMBERS).child(key).get())
+                    ref.child(member.ALUMNI).child(key).child(member.REMOVED_BY).set(remover)  
+                    ref.child(member.ALUMNI).child(key).child(member.TIMES_REMOVED).set(1)  
+                    ref.child(member.ALUMNI).child(key).child(member.DATE_REMOVED).set({".sv": "timestamp"})
                 ref.child(member.MEMBERS).child(key).delete()
                 removedSomeone = True
                 removeMsg = "Removed Discord: [" + dName + "]\n\t BDO Family: [" + bNames.pop() + "]"
                 for n in bNames:
                     removeMsg += "\n\t             [" + n + "]"
-                await client.send_message(message.channel, cssMessage(removeMsg))
+                await client.send_message(message.channel, Guild.cssMessage(removeMsg))
             if removedSomeone:
                 break
         if not removedSomeone:
-            await client.send_message(message.channel, cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+            await client.send_message(message.channel, Guild.cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
         else:
             # Roles
             try:
@@ -162,13 +186,13 @@ class Guild:
                 oldDiscord = mem.discord
                 ref.child(member.MEMBERS).child(key).update({member.DISCORD: dName})
                 updatedSomeone = True
-                await client.send_message(message.channel, cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
+                await client.send_message(message.channel, Guild.cssMessage("Updated [" + bName + "] Discord name from [" + oldDiscord + "] to [" + dName + "]"))
             elif mem.discord == dName and mem.discord != "":
                 if len(mem.accounts) == 1:
                     oldName = mem.accounts[0]
                     ref.child(member.MEMBERS).child(key).child(member.ACCOUNTS).child(list(ref.child(member.MEMBERS).child(key).child(member.ACCOUNTS).get().keys()).pop()).set(bName)
                     updatedSomeone = True
-                    await client.send_message(message.channel, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
+                    await client.send_message(message.channel, Guild.cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
                 else:
                     msg = "[" + mem.discord + "] has more than one account.\n Which account would you like to update?\n\n"
                     i = 1
@@ -176,19 +200,19 @@ class Guild:
                         msg += str(i) + ".)\t " + account + "\n"
                         i += 1
                     msg += "99.)\tCancel\n\n Please reply with the number of your choice."
-                    await client.send_message(message.channel, cssMessage(msg))
+                    await client.send_message(message.channel, Guild.cssMessage(msg))
                     valid = False
                     def check(m):
                         return not (m.content.startswith(prefix) or m.content.startswith("<"))
                     while not valid:
                         reply = await client.wait_for_message(author=message.author, channel=message.channel, check=check)
                         if reply == None:
-                            await client.send_message(message.channel, cssMessage("Cancelling update operation."))
+                            await client.send_message(message.channel, Guild.cssMessage("Cancelling update operation."))
                             return
                         try:
                             choice = int(reply.content)
                             if choice == 99:
-                                await client.send_message(message.channel, cssMessage("Cancelling update operation."))
+                                await client.send_message(message.channel, Guild.cssMessage("Cancelling update operation."))
                                 return
                             choice -= 1
                             for id, acc in val[member.ACCOUNTS].items():
@@ -196,13 +220,13 @@ class Guild:
                                     oldName = mem.accounts[choice]
                                     ref.child(member.MEMBERS).child(key).child(member.ACCOUNTS).child(id).set(bName)
                                     updatedSomeone = True
-                                    await client.send_message(message.channel, cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
+                                    await client.send_message(message.channel, Guild.cssMessage("Updated [" + dName + "] BDO family name from [" + oldName + "] to [" + bName + "]"))
                                     valid = True
                         except:
-                            await client.send_message(message.channel, cssMessage("Please reply with only a number matching one of the options."))
+                            await client.send_message(message.channel, Guild.cssMessage("Please reply with only a number matching one of the options."))
             if updatedSomeone:
                 return
-        await client.send_message(message.channel, cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+        await client.send_message(message.channel, Guild.cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
     # Search for a member in discord and bdo family
     async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False):
@@ -303,10 +327,10 @@ class Guild:
         # Final messages
         if resultFound:            
             print(msg)
-            await client.send_message(message.channel, cssMessage(msg))
+            await client.send_message(message.channel, Guild.cssMessage(msg))
         else:
             print("[" + search + "] was not found")
-            await client.send_message(message.channel, cssMessage("[" + search + "] was not found"))
+            await client.send_message(message.channel, Guild.cssMessage("[" + search + "] was not found"))
 
     # Get a list of current guild members!
     async def getGuildList(self, message, server = None):
@@ -362,7 +386,11 @@ class Guild:
         print("Getting firbase members")
         for id, m in members.items():
             mem = Member(m)
-            dNameMembers[mem.discord] = mem.accounts
+            discordMember = server.get_member(mem.id)
+            if not discordMember == None:
+                dNameMembers[discordMember.name + "#" + discordMember.discriminator] = mem.accounts
+            else:
+                dNameMembers[mem.discord] = mem.accounts
 
         # Get all hooligans from discord
         hooligans = []
@@ -370,7 +398,7 @@ class Guild:
         for mem in server.members:
             isGuildMember = False
             for mRole in mem.roles:
-                if isGuildRole(mRole):
+                if Guild.isGuildRole(mRole):
                     isGuildMember = True
             if isGuildMember:
                 hooligans.append(mem.name + '#' + mem.discriminator)
@@ -395,7 +423,7 @@ class Guild:
             print("Writing")
             with io.open(dir_path + "/guildDiscordMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await client.send_message(message.channel, cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
+            await client.send_message(message.channel, Guild.cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
         if len(bdoMissing) > 0:
             msg = ''
             for mem in bdoMissing:
@@ -410,11 +438,11 @@ class Guild:
             print("Writing")
             with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await client.send_message(message.channel, cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
+            await client.send_message(message.channel, Guild.cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
         if len(bdoMissing) == 0 and len(discordMissing) == 0:
-            await client.send_message(message.channel, cssMessage("All members accounted for!"))
+            await client.send_message(message.channel, Guild.cssMessage("All members accounted for!"))
         return
-
+    
     # returns a string that is styled in css way for discord
     def cssMessage(msg):
         return "```CSS\n" + msg + "\n```"

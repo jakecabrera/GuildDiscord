@@ -58,7 +58,7 @@ async def on_ready():
 async def on_member_remove(member):
     if not risenServer.id == member.server.id:
         return
-    msg = member.top_role.name + " " + member.name + "#" + member.discriminator + " has left the server."
+    msg = member.top_role.name + " <@" + member.id + "> has left the server."
     msg = msg.replace('@everyone ', '')
     print(msg)
     await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
@@ -129,10 +129,9 @@ async def on_message(message):
         await client.send_message(message.channel, "pong!")
 
     #elif m.startswith(Guild.prefix + "FIX DATABASE"):
-    #    for k, v in ref.child('Members').get().items():
-    #        ref.child('Members').child(k).child('discordID').delete()
     #    for k, v in ref.child('Alumni').get().items():
-    #        ref.child('Alumni').child(k).child('discordID').delete()
+    #        ref.child('Alumni').child(k).child('TimesRemoved').set(1)
+    #        ref.child('Alumni').child(k).child('timesRemoved').delete()
     #    return
 
     # Help!

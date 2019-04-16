@@ -28,6 +28,13 @@ ref = db.reference('Guild')
 risenServer = None
 risenGuild = None
 
+removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
+updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
+namesPattern = re.compile(r'(?<=>)[ ]?.*]')
+discordNamePattern = re.compile(r'.*#\d{4}')
+bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
+addPattern = re.compile(r'<ADDED>.*\[.*\]')
+
 # File to check if still available to complete missions or not
 if not stateFileExists:
     with open(dir_path + '/state', 'x') as f:
@@ -58,7 +65,7 @@ async def on_ready():
 async def on_member_remove(member):
     if not risenServer.id == member.server.id:
         return
-    msg = member.top_role.name + " <@" + member.id + "> has left the server."
+    msg = member.top_role.name + " " + member.mention + " has left the server."
     msg = msg.replace('@everyone ', '')
     print(msg)
     await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
@@ -72,12 +79,6 @@ async def on_message(message):
         return
 
     m = message.content.upper()
-    removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
-    updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
-    namesPattern = re.compile(r'(?<=>)[ ]?.*]')
-    discordNamePattern = re.compile(r'.*#\d{4}')
-    bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
-    addPattern = re.compile(r'<ADDED>.*\[.*\]')
     
     # Set State
     if message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "STATE") and Guild.isAuthorizedChannel(message.channel):
@@ -282,6 +283,21 @@ async def finishMission(channel):
     else:
         await client.send_message(channel,Guild.cssMessage("You got it! Finishing mission..."))
         ref.child('BotCommands').update({'FinishMission':True})
+
+# Still debating on whether to do the following below. Basically a user can ask the bot
+# to notify them whenever the registered keywords are found in a message (could be your 
+# name without mention or even something weird like Cats). Gonna have to make it only 
+# notify them for messages that their role has access to though. It will also make my
+# bot parse every single message, so performance wise, maybe not. Also privacy concerns
+# and what not.
+async def enrollInNotifications(message):
+    return
+
+def containsKeyword(message):
+    return
+
+def notify(message):
+    return
 
 # Resets mission to false
 def startMission():

@@ -58,6 +58,7 @@ class Guild:
 
     # Adds an entry to the database
     async def addGuildie(self, dName, bName, adder, message, server = None):
+        await client.send_typing(message.channel)
         ref = self.ref
         client = self.client
         if server == None:
@@ -130,6 +131,7 @@ class Guild:
 
     # Removes guildie from database
     async def removeGuildie(self, dName, bName, remover, message, server = None):
+        await client.send_typing(message.channel)
         client = self.client
         ref = self.ref
         if server == None:
@@ -198,6 +200,7 @@ class Guild:
 
     # Update guildie
     async def updateGuildie(self, dName, bName, message, server = None):
+        await client.send_typing(message.channel)
         client = self.client
         ref = self.ref
         if server == None:
@@ -411,7 +414,7 @@ class Guild:
         print("Getting firbase members")
         for id, m in members.items():
             mem = Member(m)
-            discordMember = server.get_member(mem.id)
+            discordMember = client.get_user_info(mem.id)
             if not discordMember == None:
                 dNameMembers[discordMember.name + "#" + discordMember.discriminator] = mem.accounts
             else:

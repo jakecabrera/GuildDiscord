@@ -68,7 +68,7 @@ async def on_member_remove(member):
     msg = member.top_role.name + " " + member.mention + " has left the server."
     msg = msg.replace('@everyone ', '')
     print(msg)
-    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
+    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), msg)
 
 @client.event
 async def on_message(message):

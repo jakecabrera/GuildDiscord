@@ -15,6 +15,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+import member
 import guild
 from guild import Guild
 
@@ -65,10 +66,10 @@ async def on_ready():
 async def on_member_remove(member):
     if not risenServer.id == member.server.id:
         return
-    msg = member.top_role.name + " " + member.mention + " has left the server."
+    msg = member.top_role.name + " [" + str(member) + "] has left the server."
     msg = msg.replace('@everyone ', '')
     print(msg)
-    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), msg)
+    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
 
 @client.event
 async def on_message(message):
@@ -271,7 +272,7 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await risenGuild.searchMembers(mesg[i:], message, group=MemberModule.ALUMNI, alt=alt)
+            await risenGuild.searchMembers(mesg[i:], message, group=member.ALUMNI, alt=alt)
     return
 
 # Sends a signal to voice attack to turn in the mission

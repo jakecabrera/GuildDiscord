@@ -58,9 +58,9 @@ class Guild:
 
     # Adds an entry to the database
     async def addGuildie(self, dName, bName, adder, message, server = None):
-        await client.send_typing(message.channel)
         ref = self.ref
         client = self.client
+        await client.send_typing(message.channel)
         if server == None:
             server = self.server
         dName = dName.replace('@', '')
@@ -131,8 +131,8 @@ class Guild:
 
     # Removes guildie from database
     async def removeGuildie(self, dName, bName, remover, message, server = None):
-        await client.send_typing(message.channel)
         client = self.client
+        await client.send_typing(message.channel)
         ref = self.ref
         if server == None:
             server = self.server
@@ -162,7 +162,7 @@ class Guild:
                             if alum.id == '':
                                 ref.child(member.ALUMNI).child(aKey).child(member.DISCORD_ID).set(mem.id)
                             if mem.discord != alum.discord:                                
-                                user = self.client.get_user_info(mem.id)
+                                user = server.get_member(mem.id)
                                 ref.child(member.ALUMNI).child(aKey).child(member.DISCORD).set(user.name + '#' + user.discriminator)
                         ref.child(member.ALUMNI).child(aKey).child(member.DATE_REMOVED).set({".sv": "timestamp"})
                         ref.child(member.ALUMNI).child(aKey).child(member.REMOVED_BY).set(remover)
@@ -200,8 +200,8 @@ class Guild:
 
     # Update guildie
     async def updateGuildie(self, dName, bName, message, server = None):
-        await client.send_typing(message.channel)
         client = self.client
+        await client.send_typing(message.channel)
         ref = self.ref
         if server == None:
             server = self.server
@@ -313,7 +313,7 @@ class Guild:
                 msg += "\n\n--------------------------------------------"
                 if alt:
                     # Get discord name
-                    disMem = client.get_user_info(mem.id)
+                    disMem = server.get_member(mem.id)
                     disPrint = mem.discord
                     if disMem != None:
                         disPrint = disMem.name + "#" + disMem.discriminator
@@ -414,7 +414,7 @@ class Guild:
         print("Getting firbase members")
         for id, m in members.items():
             mem = Member(m)
-            discordMember = client.get_user_info(mem.id)
+            discordMember = server.get_member(mem.id)
             if not discordMember == None:
                 dNameMembers[discordMember.name + "#" + discordMember.discriminator] = mem.accounts
             else:

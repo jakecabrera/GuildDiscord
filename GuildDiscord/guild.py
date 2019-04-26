@@ -147,38 +147,70 @@ class Guild:
                 dName = mem.discord
                 bNames = mem.accounts
 
-                # Check if this person has already been removed
-                removedBefore = False
-                for aKey, aVal in ref.child(member.ALUMNI).get().items():
-                    alum = Member(aVal)
-                    if (mem.id != '' and mem.id == alum.id) or (mem.discord == alum.discord) or (set(mem.accounts) & set(alum.accounts)):
-                        removedBefore = True
-                        # This person was once an alumni
-                        combinedAccounts = alum.accounts + list(set(mem.accounts) - set(alum.accounts))
-                        ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).delete()
-                        for account in combinedAccounts:
-                            ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).push(account)
-                        if mem.id != '':
-                            if alum.id == '':
-                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD_ID).set(mem.id)
-                            if mem.discord != alum.discord:                                
-                                user = server.get_member(mem.id)
-                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD).set(user.name + '#' + user.discriminator)
-                        ref.child(member.ALUMNI).child(aKey).child(member.DATE_REMOVED).set({".sv": "timestamp"})
-                        ref.child(member.ALUMNI).child(aKey).child(member.REMOVED_BY).set(remover)
-                        ref.child(member.ALUMNI).child(aKey).child(member.TIMES_REMOVED).set(alum.timesRemoved + 1)
-                        break
-                if not removedBefore:        
-                    ref.child(member.ALUMNI).child(key).set(ref.child(member.MEMBERS).child(key).get())
-                    ref.child(member.ALUMNI).child(key).child(member.REMOVED_BY).set(remover)  
-                    ref.child(member.ALUMNI).child(key).child(member.TIMES_REMOVED).set(1)  
-                    ref.child(member.ALUMNI).child(key).child(member.DATE_REMOVED).set({".sv": "timestamp"})
-                ref.child(member.MEMBERS).child(key).delete()
-                removedSomeone = True
-                removeMsg = "Removed Discord: [" + dName + "]\n\t BDO Family: [" + bNames.pop() + "]"
-                for n in bNames:
-                    removeMsg += "\n\t             [" + n + "]"
-                await client.send_message(message.channel, Guild.cssMessage(removeMsg))
+                # Check if wanna remove just one account
+                if len(mem.accounts) > 1:
+                    msg = "[" + mem.discord + "] has more than one account.\n What would you like to do?\n\n"
+                    msg += "1.) Remove the BDO account [" + bName + "] only.\n"
+                    msg += "2.) Remove all of this users accounts.\n"
+                    msg += "99.)\tCancel\n\n Please reply with the number of your choice."
+                    await client.send_message(message.channel, Guild.cssMessage(msg))
+                    valid = False
+                    def check(m):
+                        return not (m.content.startswith(Guild.prefix) or m.content.startswith("<"))
+                    while not valid:
+                        reply = await client.wait_for_message(author=message.author, channel=message.channel, check=check)
+                        if reply == None:
+                            await client.send_message(message.channel, Guild.cssMessage("Cancelling remove operation."))
+                            return
+                        try:
+                            choice = int(reply.content)
+                            if choice == 99:
+                                await client.send_message(message.channel, Guild.cssMessage("Cancelling remove operation."))
+                                return
+                            elif choice == 1:
+                                toRemove = bName
+                                for id, acc in val[member.ACCOUNTS].items():
+                                    if acc == bName:
+                                        oldName = mem.accounts[choice]
+                                        ref.child(member.MEMBERS).child(key).child(member.ACCOUNTS).child(id).delete()
+                                        removedSomeone = True
+                                        await client.send_message(message.channel, Guild.cssMessage("Removed [" + bName + "] account from [" + mem.discord + "]"))
+                                        valid = True
+                            elif choice == 2:
+                                # Check if this person has already been removed
+                                removedBefore = False
+                                for aKey, aVal in ref.child(member.ALUMNI).get().items():
+                                    alum = Member(aVal)
+                                    if (mem.id != '' and mem.id == alum.id) or (mem.discord == alum.discord) or (set(mem.accounts) & set(alum.accounts)):
+                                        removedBefore = True
+                                        # This person was once an alumni
+                                        combinedAccounts = alum.accounts + list(set(mem.accounts) - set(alum.accounts))
+                                        ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).delete()
+                                        for account in combinedAccounts:
+                                            ref.child(member.ALUMNI).child(aKey).child(member.ACCOUNTS).push(account)
+                                        if mem.id != '':
+                                            if alum.id == '':
+                                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD_ID).set(mem.id)
+                                            if mem.discord != alum.discord:                                
+                                                user = server.get_member(mem.id)
+                                                ref.child(member.ALUMNI).child(aKey).child(member.DISCORD).set(user.name + '#' + user.discriminator)
+                                        ref.child(member.ALUMNI).child(aKey).child(member.DATE_REMOVED).set({".sv": "timestamp"})
+                                        ref.child(member.ALUMNI).child(aKey).child(member.REMOVED_BY).set(remover)
+                                        ref.child(member.ALUMNI).child(aKey).child(member.TIMES_REMOVED).set(alum.timesRemoved + 1)
+                                        break
+                                if not removedBefore:        
+                                    ref.child(member.ALUMNI).child(key).set(ref.child(member.MEMBERS).child(key).get())
+                                    ref.child(member.ALUMNI).child(key).child(member.REMOVED_BY).set(remover)  
+                                    ref.child(member.ALUMNI).child(key).child(member.TIMES_REMOVED).set(1)  
+                                    ref.child(member.ALUMNI).child(key).child(member.DATE_REMOVED).set({".sv": "timestamp"})
+                                ref.child(member.MEMBERS).child(key).delete()
+                                removedSomeone = True
+                                removeMsg = "Removed Discord: [" + dName + "]\n\t BDO Family: [" + bNames.pop() + "]"
+                                for n in bNames:
+                                    removeMsg += "\n\t             [" + n + "]"
+                                await client.send_message(message.channel, Guild.cssMessage(removeMsg))
+                        except:
+                            await client.send_message(message.channel, Guild.cssMessage("Please reply with only a number matching one of the options."))
             if removedSomeone:
                 break
         if not removedSomeone:
@@ -231,7 +263,7 @@ class Guild:
                     await client.send_message(message.channel, Guild.cssMessage(msg))
                     valid = False
                     def check(m):
-                        return not (m.content.startswith(prefix) or m.content.startswith("<"))
+                        return not (m.content.startswith(Guild.prefix) or m.content.startswith("<"))
                     while not valid:
                         reply = await client.wait_for_message(author=message.author, channel=message.channel, check=check)
                         if reply == None:

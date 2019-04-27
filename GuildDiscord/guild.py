@@ -12,20 +12,22 @@ import discord
 from discord.ext import commands
 
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
 
 import discord
 import member
 from member import Member
 
+import database
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class Guild:
-    def __init__(self, client, ref, server):
+    def __init__(self, client, ref, server, db):
         self.server = server
         self.client = client
         self.ref = ref
+        self.db = db
+        assert isinstance(self.db, database.Database)
 
     prefix = '&'
 
@@ -477,8 +479,7 @@ class Guild:
         # Get all bdo members from firebase
         dNameMembers = {}
         print("Getting firbase members")
-        for id, m in members.items():
-            mem = Member(m)
+        for mem in self.db.members.values():
             discordMember = server.get_member(mem.id)
             if not discordMember == None:
                 dNameMembers[discordMember.name + "#" + discordMember.discriminator] = mem.accounts

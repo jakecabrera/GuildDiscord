@@ -15,6 +15,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+import database
 import member
 import guild
 from guild import Guild
@@ -53,10 +54,12 @@ okToRun = state['Available'] == 'True'
 async def on_ready():
     global risenServer
     global risenGuild
+    datab = database.Database(ref)
+
     print("The bot is ready!")
     await client.send_message(client.get_channel(Guild.AUTHORIZED_CHANNELS['test']), "Online!")
     risenServer = client.get_server('474229539636248596')
-    risenGuild = Guild(client, ref, risenServer)
+    risenGuild = Guild(client, ref, risenServer, datab)
     if not okToRun:
         await client.change_presence(game=discord.Game(name="Unavailable"))
     else:

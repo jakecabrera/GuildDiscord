@@ -35,6 +35,18 @@ class Database(object):
     def members(self):
         return self.__members.values()
 
+    @members.setter
+    def members(self, members):
+        self.__members = members
+
+    @property
+    def alumni(self):
+        return self.__alumni.values()
+
+    @alumni.setter
+    def alumni(self, alumni):
+        self.__alumni = alumni
+
     def listenerCallback(event):
         assert isinstance(event, firebase_admin.db.Event)
         print("Event!")

@@ -469,17 +469,14 @@ class Guild:
 
     # Gets the discrepencies in guild members
     async def getDiscordMissing(self, message, server = None):
-        client = self.client
-        ref = self.ref
-        await client.send_typing(message.channel)
+        await self.client.send_typing(message.channel)
         if server == None:
             server = self.server
-        members = ref.child(member.MEMBERS).get()
 
         # Get all bdo members from firebase
         dNameMembers = {}
         print("Getting firbase members")
-        for mem in self.db.members.values():
+        for mem in self.db.members:
             discordMember = server.get_member(mem.id)
             if not discordMember == None:
                 dNameMembers[discordMember.name + "#" + discordMember.discriminator] = mem.accounts
@@ -517,7 +514,7 @@ class Guild:
             print("Writing")
             with io.open(dir_path + "/guildDiscordMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await client.send_message(message.channel, Guild.cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
+            await self.client.send_message(message.channel, Guild.cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
         if len(bdoMissing) > 0:
             msg = ''
             for mem in bdoMissing:
@@ -532,9 +529,9 @@ class Guild:
             print("Writing")
             with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await client.send_message(message.channel, Guild.cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
+            await self.client.send_message(message.channel, Guild.cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
         if len(bdoMissing) == 0 and len(discordMissing) == 0:
-            await client.send_message(message.channel, Guild.cssMessage("All members accounted for!"))
+            await self.client.send_message(message.channel, Guild.cssMessage("All members accounted for!"))
         return
     
     # returns a string that is styled in css way for discord

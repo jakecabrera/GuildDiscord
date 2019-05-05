@@ -144,7 +144,7 @@ async def on_message(message):
         print("Displaying Help Message...")
         await showHelp(message.channel)
 
-    elif m.startswith("<HELP>"):
+    elif m.startswith("<HELP>") and Guild.isDatabaseChannel(message.channel):
         print("Moxie? Is that you?")
         msg = (
             "<ADDED> discord_name#1234 [bdo_family_name]" +

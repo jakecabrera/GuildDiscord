@@ -29,6 +29,7 @@ default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen
 ref = db.reference('Guild')
 risenServer = None
 risenGuild = None
+datab = None
 
 removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
 updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
@@ -54,7 +55,8 @@ okToRun = state['Available'] == 'True'
 async def on_ready():
     global risenServer
     global risenGuild
-    datab = database.Database(ref)
+    global datab
+    datab = database.Database()
 
     print("The bot is ready!")
     await client.send_message(client.get_channel(Guild.AUTHORIZED_CHANNELS['test']), "Online!")
@@ -102,6 +104,10 @@ async def on_message(message):
             await client.send_message(message.channel,Guild.cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
         print("okToRun changed to [" + str(okToRun) + "]")
+
+    elif message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "DATABASE") and Guild.isAuthorizedChannel(message.channel):
+        datab.refresh()
+        await client.send_message(message.channel, Guild.cssMessage('Refreshing'))
 
     # Mission Commands
     elif (m.startswith(Guild.prefix + "MISSION") or m.startswith(Guild.prefix + "MISSIONS")) and Guild.isAuthorizedChannel(message.channel) and okToRun:    

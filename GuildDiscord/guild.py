@@ -67,7 +67,8 @@ class Guild:
         dName = dName.replace('@', '')
         dMem = server.get_member_named(dName)
         if dMem == None:
-            await client.send_message(message.channel, Guild.cssMessage("#Warning: No user found by name of [" + dName + "] in this server"))
+            await client.send_message(message.channel, Guild.cssMessage("#Error: No user found by name of [" + dName + "] in this server. \n Cancelling operation"))
+            return
 
         # Check if member already exists
         if self.db.containsFamily(bName):
@@ -91,7 +92,7 @@ class Guild:
         memID = ''
         if dMem != None:
             memID = dMem.id
-        lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
+        lst = (memID, dMem.name, dMem.discriminator, bName)
         mem = Member(lst)
         self.db.insertGuildie(mem, message.author.id)
 
@@ -172,6 +173,17 @@ class Guild:
             return
 
         await client.send_message(message.channel, Guild.cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+
+    async def updateGuildieDiscord(self, bName, dMem, message):
+        if not self.db.containsFamily(bName):
+            await self.client.send_message(message.channel, Guild.cssMessage('No member found with the family [' + bName + ']. Cancelling operation'))
+            return
+        lst = (dMem.id, dMem.name, dMem.discriminator, bName)
+        mem = Member(lst)
+        if self.db.updateDiscord(mem, message.author.id) > 0:
+            await self.client.send_message(message.channel, Guild.cssMessage('Updated Discord successfully to [' + str(dMem) + ']'))
+        else:
+            await self.client.send_message(message.channel, Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
 
     # Search for a member in discord and bdo family
     async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False):

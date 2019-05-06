@@ -139,12 +139,6 @@ async def on_message(message):
         #await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
         await client.send_message(message.channel, "pong!")
 
-    #elif m.startswith(Guild.prefix + "FIX DATABASE"):
-    #    for k, v in ref.child('Alumni').get().items():
-    #        ref.child('Alumni').child(k).child('TimesRemoved').set(1)
-    #        ref.child('Alumni').child(k).child('timesRemoved').delete()
-    #    return
-
     # Help!
     elif m.startswith(Guild.prefix + "HELP"):
         print("Displaying Help Message...")
@@ -156,7 +150,6 @@ async def on_message(message):
             "<ADDED> discord_name#1234 [bdo_family_name]" +
             "\n<REMOVED> discord_name#1234 [bdo_family_name]" +
             "\n<LEFT> discord_name#1234 [bdo_family_name]" +
-            "\n<UPDATED> discord_name#1234 [bdo_family_name]" +
             "\n\nThe above are the ones Herbert officially recognizes so far. so basically you state in angle brackets '<>' what is happening, then you put their discord name with the discriminator (the numbers that follow the name), and then you put the bdo *family* name in square brackets '[]'." +
             "\n\nIf you are adding someone to the guild and for some weird reason you don't know their discord name, it is **okay** to omit the discord name as so:" +
             "\n<ADDED> [bdo_family_name]" +
@@ -245,10 +238,10 @@ async def on_message(message):
             await risenGuild.updateGuildie(dName, bName, message)
 
     # Guild operations
-    if m.startswith(Guild.prefix + "GUILD"):
+    if m.startswith(Guild.prefix + "GUILD "):
         i = len(Guild.prefix + "GUILD ")
         m = m[i:]
-        if m.startswith("SEARCH"):
+        if m.startswith("SEARCH "):
             mesg = message.content
             for mention in message.mentions:
                 mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
@@ -260,10 +253,27 @@ async def on_message(message):
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
             await risenGuild.searchMembers(mesg[i:], message, alt=alt)
-        if m.startswith("LIST"):
+        elif m.startswith("LIST"):
             await risenGuild.getGuildList(message)
-        if m.startswith("GET MISSING"):
+        elif m.startswith("GET MISSING"):
             await risenGuild.getDiscordMissing(message)
+        elif m.startswith('UPDATE '):
+            mesg = message.content
+            for mention in message.mentions:
+                mesg = mesg.replace('<@' + mention.id + '>', str(mention))
+                mesg = mesg.replace('<@!' + mention.id + '>', str(mention))
+                mesg = mesg.replace(Guild.prefix + 'GUILD UPDATE ', '')
+            m = m[len(m.split(" ")[0]) + 1:]
+            i += len("UPDATE ")
+            if m.startswith('DISCORD '):
+                m = mesg[i:]
+                bName = m.split(' ')[1]
+                dMem = risenServer.get_member_named(m.split(' ')[2].split('#')[0])
+                if dMem == None:
+                    msg = 'No discord member found in this server as [' + m.split(' ')[2] + ']'
+                    await client.send_message(message.channel,Guild.cssMessage(msg))
+                else:
+                    await risenGuild.updateGuildieDiscord(bName, dMem, message)
         print("End Guild Ops")
 
     # Alumni operations

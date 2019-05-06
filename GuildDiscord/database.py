@@ -114,17 +114,47 @@ class Database(object):
             c.execute(sql)
             print('looking for discord')
             if c.rowcount > 0:
+
                 print('found')
                 result = c.fetchone()
+                if result == None and mem.id != None:
+                    sql = 'INSERT IGNORE INTO DISCORD(D_ID, D_NAME, D_DISCRIMINATOR) VALUES('
+                    sql += mem.id + ','
+                    sql += '\'' + mem.shortDiscord + '\','
+                    sql += '\'' + mem.discord.split('#')[1] + '\');'
                 print(result[0])
 
             #sql = 'UPDATE GUILDIE SET D_ID = ' + id + ' WHERE G_FAMILY = \'' + mem.account + '\';'
             #c.execute()
         #else:
             # We are updating family name
-            #sql = 'UPDATE GUILDIE SET G_FAMILY = \'' + mem.account + '\' WHERE D_ID = ' + id + ';'
-            #c.execute()
+            # sql = 'UPDATE GUILDIE SET G_FAMILY = \'' + mem.account + '\' WHERE D_ID = ' + id + ';'
+            # c.execute()
 
+
+        rowCount = c.rowcount
+
+        #self.documentOperation(mem, operatorID, 'UPDATE')
+        #self.updateMembers()
+        c.close()
+        return rowCount
+
+    def updateDiscord(self, mem, operatorID):
+        c = self.mydb.cursor(buffered=True)
+
+        sql = 'SELECT * FROM DISCORD WHERE D_ID = ' + mem.id + ';'
+        c.execute(sql)
+        result = c.fetchall()
+        if len(result) == 0:
+            # Enter new discord too
+            sql = 'INSERT INTO DISCORD VALUES ('
+            sql += mem.id + ','
+            sql += '\'' + mem.shortDiscord + '\','
+            sql += '\'' + mem.discord.split('#')[1] + '\');'
+            c.execute(sql)
+        
+        sql = 'UPDATE GUILDIE SET D_ID = ' + mem.id + ' WHERE G_FAMILY = \'' + mem.account + '\';'
+        c.execute(sql)
         rowCount = c.rowcount
 
         self.documentOperation(mem, operatorID, 'UPDATE')

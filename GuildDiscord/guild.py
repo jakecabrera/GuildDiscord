@@ -240,19 +240,20 @@ class Guild:
 
         # Search database against matches
         for mem in dbMembers:
-            if mem.id in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in discordMatches):
+            if str(mem.id) in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in discordMatches):
                 resultFound = True
                 msg += "\n\n--------------------------------------------"
                 if alt:
                     # Get discord name
-                    disMem = server.get_member(mem.id)
+                    disMem = server.get_member(str(mem.id))
                     disPrint = mem.discord if mem.discord != None else ''
                     if disMem != None:
                         disPrint = disMem.name + "#" + disMem.discriminator
 
                     msg += "\n" + disPrint + " [" + mem.account + "]"
                 else:
-                    m = server.get_member(mem.id)
+                    m = server.get_member(str(mem.id))
+                    print(m)
                     memberDiscord = mem.discord
                     if m != None:
                         memberDiscord = str(m)
@@ -261,11 +262,6 @@ class Guild:
                     msg += "\nDiscord:      [" + memberDiscord + "]\n" + "BDO Family:   [" + mem.account + "]"
                     if m != None and m.nick != None:
                         msg += "\nNickname:     [" + m.nick + "]"
-                    #msg += "\nAdded By:     [" + mem.addedBy + "]"
-                    #msg += "\nDate Added:   [" + mem.dateAdded + "]"
-                    #if group == member.ALUMNI:
-                    #    msg += "\nRemoved By:   [" + mem.removedBy + "]"
-                    #    msg += "\nDate Removed: [" + mem.dateRemoved + "]"
                 msg += "\n--------------------------------------------"
 
         # Final messages
@@ -287,7 +283,7 @@ class Guild:
         for mem in self.db.members:
             disPrint = mem.discord
             nickPrint = ""
-            dName = server.get_member(mem.id)
+            dName = server.get_member(str(mem.id))
             if dName != None: 
                 disPrint = str(dName)
                 if dName.nick != None:
@@ -321,7 +317,7 @@ class Guild:
         dNameMembers = {}
         print("Getting firbase members")
         for mem in self.db.members:
-            discordMember = server.get_member(mem.id)
+            discordMember = server.get_member(str(mem.id))
             if not discordMember == None:
                 dNameMembers[mem.account] = str(discordMember)
             else:
@@ -342,12 +338,12 @@ class Guild:
         discordMissing = []
         print("Comparing")
         for mem in hooligans:
-            if not mem in dNameMembers:
+            if not mem in dNameMembers.values():
                 discordMissing.append(mem)
 
         # Compare bdo members against hooligans
         bdoMissing = []
-        for mem in dNameMembers:
+        for mem in dNameMembers.values():
             if not mem in hooligans:
                 bdoMissing.append(mem)
 
@@ -363,11 +359,11 @@ class Guild:
             msg = ''
             for mem in bdoMissing:
                 name = mem
-                if name == "":
+                if name == None or name == "":
                     name = "NO_DISCORD_NAME_FOUND"
                 msg += name + '\r\n'
                 account = ''
-                for a, d in dNameMembers:
+                for a, d in dNameMembers.items():
                     if d == mem:
                         account = a
                         break

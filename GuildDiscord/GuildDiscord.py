@@ -126,17 +126,17 @@ async def on_message(message):
     # Ping Pong
     elif m.startswith(Guild.prefix + "PING"):
         print("Ping!")
-        #roles = message.server.roles
-        #msg = ""
-        #for role in roles:
-        #    msg += role.id + ":\t" + role.name + "\n"
-        #await client.send_message(client.get_channel("259049604627169291"), msg)
-        #channels = message.server.channels
-        #msg = ""
-        #for channel in channels:
-        #    msg += channel.id + ":\t" + channel.name + "\n"
-        #await client.send_message(client.get_channel("259049604627169291"), msg)
-        #await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
+        roles = message.server.roles
+        msg = ""
+        for role in roles:
+            msg += role.id + ":\t" + role.name + "\n"
+        await client.send_message(client.get_channel("259049604627169291"), msg)
+        channels = message.server.channels
+        msg = ""
+        for channel in channels:
+            msg += channel.id + ":\t" + channel.name + "\n"
+        await client.send_message(client.get_channel("259049604627169291"), msg)
+        await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
         await client.send_message(message.channel, "pong!")
 
     # Help!
@@ -268,9 +268,9 @@ async def on_message(message):
             if m.startswith('DISCORD '):
                 m = mesg[i:]
                 bName = m.split(' ')[1]
-                dMem = risenServer.get_member_named(m.split(' ')[2].split('#')[0])
+                dMem = risenServer.get_member_named(' '.join(m.split(' ')[2:]))
                 if dMem == None:
-                    msg = 'No discord member found in this server as [' + m.split(' ')[2] + ']'
+                    msg = 'No discord member found in this server as [' + ' '.join(m.split(' ')[2:]) + ']'
                     await client.send_message(message.channel,Guild.cssMessage(msg))
                 else:
                     await risenGuild.updateGuildieDiscord(bName, dMem, message)

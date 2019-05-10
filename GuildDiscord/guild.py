@@ -212,6 +212,10 @@ class Guild:
         else:
             print('Looking for an alumni')
             dbMembers = self.db.alumni
+        dbDiscord = list()
+        for m in dbMembers:
+            if m.shortDiscord != None:
+                dbDiscord.append(m.shortDiscord)
 
         # Get db familys
         bdoMembers = []
@@ -221,7 +225,9 @@ class Guild:
         disMatches = []
         # Check for any matches for the name in discord
         discordMatches = get_close_matches(search.upper(), (x.split("#")[0].upper() for x in list(discordMembers.keys())))
+        altDiscordMatches = get_close_matches(search.upper(), (x.upper() for x in list(dbDiscord)))
         nickMatches = get_close_matches(search.upper(), list(nicks.keys()))
+
         for k, v in discordMembers.items():
             if k.split('#')[0] in discordMatches:
                 disMatches.append(v.id)
@@ -233,6 +239,7 @@ class Guild:
         bdoMatches = get_close_matches(search.upper(), bdoMembers)
         print(disMatches)
         print(bdoMatches)
+        print(altDiscordMatches)
 
         # Begin output message
         msg = "Results for  [" + search + "]:"
@@ -240,7 +247,7 @@ class Guild:
 
         # Search database against matches
         for mem in dbMembers:
-            if str(mem.id) in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in discordMatches):
+            if str(mem.id) in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in set(discordMatches).union(set(altDiscordMatches))):
                 resultFound = True
                 msg += "\n\n--------------------------------------------"
                 if alt:

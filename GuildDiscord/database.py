@@ -64,7 +64,7 @@ class Database(object):
 
     def reinstateGuildie(self, mem, operatorID):
         c = self.mydb.cursor(buffered=True)
-        c.execute('UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = \''+mem.account+'\';')
+        c.execute('UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = \'%s\';', mem.account)
         c.close()
         self.documentOperation(mem, operatorID, 'ADD')
         self.updateMembers()
@@ -74,14 +74,16 @@ class Database(object):
         c = self.mydb.cursor(buffered=True)
         sql = 'INSERT IGNORE INTO DISCORD VALUES ('
         sql += mem.id + ','
-        sql += '\'' + mem.discord.split('#')[0] + '\','
+        sql += '\'%s\','
         sql += '\'' + mem.discord.split('#')[1] + '\');'
-        c.execute(sql)
+        name = mem.discord.split('#')[0]
+        c.execute(sql, name)
 
         sql = 'INSERT INTO GUILDIE(D_ID, G_FAMILY) VALUES('
         sql += mem.id + ','
-        sql += '\'' + mem.account + '\');'
-        c.execute(sql)
+        sql += '\'%s\');'
+        family = mem.account
+        c.execute(sql, family)
         rowCount = c.rowcount
         c.close()
 
@@ -120,8 +122,9 @@ class Database(object):
                 if result == None and mem.id != None:
                     sql = 'INSERT IGNORE INTO DISCORD(D_ID, D_NAME, D_DISCRIMINATOR) VALUES('
                     sql += mem.id + ','
-                    sql += '\'' + mem.shortDiscord + '\','
+                    sql += '\'%s\','
                     sql += '\'' + mem.discord.split('#')[1] + '\');'
+                    dName = mem.shortDiscord
                 print(result[0])
 
             #sql = 'UPDATE GUILDIE SET D_ID = ' + id + ' WHERE G_FAMILY = \'' + mem.account + '\';'
@@ -149,12 +152,14 @@ class Database(object):
             # Enter new discord too
             sql = 'INSERT INTO DISCORD VALUES ('
             sql += mem.id + ','
-            sql += '\'' + mem.shortDiscord + '\','
+            sql += '\'%s\','
             sql += '\'' + mem.discord.split('#')[1] + '\');'
-            c.execute(sql)
+            dName = mem.shortDiscord
+            c.execute(sql, dName)
         
-        sql = 'UPDATE GUILDIE SET D_ID = ' + mem.id + ' WHERE G_FAMILY = \'' + mem.account + '\';'
-        c.execute(sql)
+        sql = 'UPDATE GUILDIE SET D_ID = ' + mem.id + ' WHERE G_FAMILY = \'%s\';'
+        family = mem.account
+        c.execute(sql, family)
         rowCount = c.rowcount
 
         self.documentOperation(mem, operatorID, 'UPDATE')

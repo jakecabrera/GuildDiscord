@@ -64,7 +64,7 @@ class Database(object):
 
     def reinstateGuildie(self, mem, operatorID):
         c = self.mydb.cursor(buffered=True)
-        c.execute("UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = %s;", mem.account)
+        c.execute("UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = %s;", [mem.account])
         c.close()
         self.documentOperation(mem, operatorID, "ADD")
         self.updateMembers()
@@ -94,8 +94,8 @@ class Database(object):
     def removeGuildie(self, mem, operatorID):
         c = self.mydb.cursor(buffered=True)
 
-        sql = "UPDATE GUILDIE SET G_CURRENT_MEMBER = FALSE WHERE G_FAMILY = \"" + mem.account + "\";"
-        c.execute(sql)
+        sql = "UPDATE GUILDIE SET G_CURRENT_MEMBER = FALSE WHERE G_FAMILY = %s;"
+        c.execute(sql, [mem.account])
         rowCount = c.rowcount
 
         self.documentOperation(mem, operatorID, "REMOVE")

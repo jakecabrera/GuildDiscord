@@ -279,6 +279,13 @@ class Guild:
             print("[" + search + "] was not found")
             await client.send_message(message.channel, Guild.cssMessage("[" + search + "] was not found"))
 
+    async def getFamilyByID(self, dMem):
+        msg = ""
+        for mem in self.db.members:
+            if str(mem.id) == dMem.id:
+                msg += "\nBDO Family: [" + mem.account + "]"
+        return msg
+
     # Get a list of current guild members!
     async def getGuildList(self, message, server = None):
         if server == None:

@@ -47,7 +47,8 @@ state = {}
 with open(dir_path + '/state') as f:
     content = f.readlines()
     for line in content:
-        state[line.split(':')[0].strip()] = line.split(':')[1].strip()
+        if line != '' or not line.startswith('#'):
+            state[line.split(':')[0].strip()] = line.split(':')[1].strip()
 
 okToRun = state['Available'] == 'True'
 

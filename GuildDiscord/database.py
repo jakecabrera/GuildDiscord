@@ -26,16 +26,21 @@ TIMES_REMOVED = "TimesRemoved"
 
 class Database(object):
     def __init__(self):
-        #dir_path = os.path.dirname(os.path.realpath(__file__))
-        #creds = {}
-        #with open(dir_path + "/dbcred") as f:
-        #    creds = f.readlines()
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        creds = {}
+        print('Initializing database object')
+        with open(dir_path + "/dbcred") as f:
+            content = f.readlines()
+            for line in content:
+                if line != '' or not line.startswith('#'):
+                    creds[line.split('=')[0].strip()] = line.split('=')[1].strip()
+
         self.mydb = mysql.connector.connect(
-            host="localhost",
-            user="risenuser",
-            passwd="risenuser",
-            database="risen",
-            charset="utf8mb4"
+            host = creds['host'],
+            user = creds['user'],
+            passwd = creds['passwd'],
+            database = creds['database'],
+            charset = creds['charset']
             )
 
         c = self.mydb.cursor(buffered=True)

@@ -49,8 +49,14 @@ with open(dir_path + '/state') as f:
     for line in content:
         if line != '' or not line.startswith('#'):
             state[line.split(':')[0].strip()] = line.split(':')[1].strip()
-
 okToRun = state['Available'] == 'True'
+
+addAndRemoveHelpMessage = ""
+
+with open(dir_path + '/addAndRemoveHelp.txt') as f:
+    content = f.readlines()
+    for line in content:
+        addAndRemoveHelpMessage += line
 
 @client.event
 async def on_ready():
@@ -149,21 +155,7 @@ async def on_message(message):
 
     elif m.startswith("<HELP>") and Guild.isDatabaseChannel(message.channel):
         print("Moxie? Is that you?")
-        msg = (
-            "<ADDED> discord_name#1234 [bdo_family_name]" +
-            "\n<REMOVED> discord_name#1234 [bdo_family_name]" +
-            "\n<LEFT> discord_name#1234 [bdo_family_name]" +
-            "\n\nThe above are the ones Herbert officially recognizes so far. so basically you state in angle brackets '<>' what is happening, then you put their discord name with the discriminator (the numbers that follow the name), and then you put the bdo *family* name in square brackets '[]'." +
-            "\n\nIf you are adding someone to the guild and for some weird reason you don't know their discord name, it is **okay** to omit the discord name as so:" +
-            "\n<ADDED> [bdo_family_name]" +
-            "\n\nIf they have a cool down, can't join just yet, or is added as a friendo for any reason, the format is as follows:" +
-            "\n<FRIENDO (reason why friendo)> discord_name#1234 [bdo_family_name]" +
-            "\nexample:" +
-            "\n<FRIENDO 24h COOLDOWN> sarge841#8833 [Aeldrelm]" +
-            "\n\nWith friendo, a lot of the times you won't know the bdo family name when friendoing. In those cases, omitting the bdo family name is **okay**. Like so:" +
-            "\n<FRIENDO> sarge841#8833 []" 
-            )
-        await client.send_message(message.channel,Guild.cssMessage(msg))
+        await client.send_message(message.channel,Guild.cssMessage(addAndRemoveHelpMessage))
 
     elif m.startswith("=PAT"):
         time.sleep(2)

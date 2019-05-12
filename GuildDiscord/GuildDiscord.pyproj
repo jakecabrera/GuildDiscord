@@ -34,6 +34,7 @@
     <Folder Include="json\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="addAndRemoveHelp.txt" />
     <Content Include="risen-59032-ffc0d0af3cc4.json" />
     <Content Include="Todo.txt" />
     <Content Include="token" />

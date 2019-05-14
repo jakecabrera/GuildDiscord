@@ -34,6 +34,7 @@ class Database(object):
             for line in content:
                 if line != '' or not line.startswith('#'):
                     creds[line.split('=')[0].strip()] = line.split('=')[1].strip()
+        self.creds = creds
 
         self.mydb = mysql.connector.connect(
             host = creds['host'],
@@ -43,7 +44,7 @@ class Database(object):
             charset = creds['charset']
             )
 
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM MEMBERS;")
         result = c.fetchall()
@@ -68,7 +69,7 @@ class Database(object):
         return False
 
     def reinstateGuildie(self, mem, operatorID):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
         c.execute("UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = %s;", [mem.account])
         c.close()
         self.documentOperation(mem, operatorID, "ADD")
@@ -76,7 +77,7 @@ class Database(object):
         self.updateAlumni()
 
     def insertGuildie(self, mem, operatorID):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
         sql = "INSERT IGNORE INTO DISCORD VALUES ("
         sql += mem.id + ","
         sql += "%s,"
@@ -97,7 +98,7 @@ class Database(object):
         return rowCount
 
     def removeGuildie(self, mem, operatorID):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         sql = "UPDATE GUILDIE SET G_CURRENT_MEMBER = FALSE WHERE G_FAMILY = %s;"
         c.execute(sql, [mem.account])
@@ -111,7 +112,7 @@ class Database(object):
 
     # Fix update of family
     def updateGuildie(self, mem, operatorID):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         if self.containsFamily(mem.account):
             # We are updating discord
@@ -148,7 +149,7 @@ class Database(object):
         return rowCount
 
     def updateDiscord(self, mem, operatorID):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         sql = "SELECT * FROM DISCORD WHERE D_ID = " + mem.id + ";"
         c.execute(sql)
@@ -180,7 +181,7 @@ class Database(object):
         return rowCount
 
     def documentOperation(self, mem, operatorID, operation):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
         sql = "INSERT INTO ADD_AND_REMOVE(G_ID, OPERATION, OPERATOR) VALUES ("
         sql += "(SELECT G_ID FROM GUILDIE WHERE G_FAMILY = \"" + mem.account + "\" LIMIT 1),"
         sql += "\"" + operation + "\","
@@ -190,7 +191,7 @@ class Database(object):
         self.mydb.commit()
 
     def updateMembers(self):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM MEMBERS;")
         result = c.fetchall()
@@ -198,7 +199,7 @@ class Database(object):
         self.members = list(Member(x) for x in result)
         
     def updateAlumni(self):
-        c = self.mydb.cursor(buffered=True)
+        c = self.cursor()
 
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM ALUMNI;")
         result = c.fetchall()
@@ -208,3 +209,14 @@ class Database(object):
     def refresh(self):
         self.updateMembers()
         self.updateAlumni()
+
+    def cursor(self):
+        if not self.mydb.is_connected():
+            self.mydb = mysql.connector.connect(
+                host = self.creds['host'],
+                user = self.creds['user'],
+                passwd = self.creds['passwd'],
+                database = self.creds['database'],
+                charset = self.creds['charset']
+                )
+        return self.mydb.cursor(buffered=True)

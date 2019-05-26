@@ -78,16 +78,20 @@ class Database(object):
 
     def insertGuildie(self, mem, operatorID):
         c = self.cursor()
-        sql = "INSERT IGNORE INTO DISCORD VALUES ("
-        sql += mem.id + ","
-        sql += "%s,"
-        sql += "\"" + mem.discord.split("#")[1] + "\");"
-        name = mem.discord.split("#")[0]
-        c.execute(sql, [name])
+        sql = ""
+        if mem.id != '':
+            sql = "INSERT IGNORE INTO DISCORD VALUES ("
+            sql += str(mem.id) + ","
+            sql += "%s,"
+            sql += "\"" + mem.discord.split("#")[1] + "\");"
+            name = mem.discord.split("#")[0]
+            c.execute(sql, [name])
 
-        sql = "INSERT INTO GUILDIE(D_ID, G_FAMILY) VALUES("
-        sql += mem.id + ","
-        sql += "%s);"
+            sql = "INSERT INTO GUILDIE(D_ID, G_FAMILY) VALUES("
+            sql += str(mem.id) + ","
+            sql += "%s);"
+        else:
+            sql = "INSERT INTO GUILDIE(G_FAMILY) VALUES(%s);"
         family = mem.account
         c.execute(sql, [family])
         rowCount = c.rowcount
@@ -127,7 +131,7 @@ class Database(object):
                 result = c.fetchone()
                 if result == None and mem.id != None:
                     sql = "INSERT IGNORE INTO DISCORD(D_ID, D_NAME, D_DISCRIMINATOR) VALUES("
-                    sql += mem.id + ","
+                    sql += str(mem.id) + ","
                     sql += "%s,"
                     sql += "\"" + mem.discord.split("#")[1] + "\");"
                     dName = mem.shortDiscord
@@ -151,14 +155,14 @@ class Database(object):
     def updateDiscord(self, mem, operatorID):
         c = self.cursor()
 
-        sql = "SELECT * FROM DISCORD WHERE D_ID = " + mem.id + ";"
+        sql = "SELECT * FROM DISCORD WHERE D_ID = " + str(mem.id) + ";"
         c.execute(sql)
         result = c.fetchall()
         rowCount = 0
         if len(result) == 0:
             # Enter new discord too
             sql = "INSERT INTO DISCORD VALUES ("
-            sql += mem.id + ","
+            sql += str(mem.id) + ","
             sql += "%s,"
             sql += "\"" + mem.discord.split("#")[1] + "\");"
             dName = mem.shortDiscord
@@ -166,11 +170,11 @@ class Database(object):
             rowCount += c.rowcount
         else:
             # Enter new discord too
-            sql = "UPDATE DISCORD SET D_NAME = %s, D_DISCRIMINATOR = %s WHERE D_ID = " + mem.id + ";"
+            sql = "UPDATE DISCORD SET D_NAME = %s, D_DISCRIMINATOR = %s WHERE D_ID = " + str(mem.id) + ";"
             c.execute(sql, [mem.shortDiscord, mem.discord.split('#')[1]])
             rowCount += c.rowcount
         
-        sql = "UPDATE GUILDIE SET D_ID = " + mem.id + " WHERE G_FAMILY = %s;"
+        sql = "UPDATE GUILDIE SET D_ID = " + str(mem.id) + " WHERE G_FAMILY = %s;"
         family = mem.account
         c.execute(sql, [family])
         rowCount += c.rowcount
@@ -185,7 +189,7 @@ class Database(object):
         sql = "INSERT INTO ADD_AND_REMOVE(G_ID, OPERATION, OPERATOR) VALUES ("
         sql += "(SELECT G_ID FROM GUILDIE WHERE G_FAMILY = \"" + mem.account + "\" LIMIT 1),"
         sql += "\"" + operation + "\","
-        sql += "\"" + operatorID + "\");"
+        sql += "\"" + str(operatorID) + "\");"
         c.execute(sql)
         c.close()
         self.mydb.commit()

@@ -24,6 +24,9 @@
     <Compile Include="database.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="dungeon.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="guild.py" />
     <Compile Include="member.py">
       <SubType>Code</SubType>

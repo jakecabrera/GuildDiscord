@@ -32,51 +32,51 @@ class Guild:
     prefix = '&'
 
     AUTHORIZED_CHANNELS = {
-        "test": "259049604627169291", # Private test channel
-        "ops": "517203484467134484" # ops channel
+        "test": 259049604627169291, # Private test channel
+        "ops": 517203484467134484 # ops channel
         }
 
     DATABASE_CHANNELS = {
-        "addAndRemove": "474242123143577610", # Add-and-remove
-        "test": "259049604627169291" # Private test channel
+        "addAndRemove": 474242123143577610, # Add-and-remove
+        "test": 259049604627169291 # Private test channel
         }
 
     AUTHORIZED_ROLES = {
-        "539836157656301570", # Leadership
-        "513372116519878716", # Role from my test server
-        "474234873763201026", # Senpai notice me
-        "474235266190540800", # Risen officer
+        539836157656301570, # Leadership
+        513372116519878716, # Role from my test server
+        474234873763201026, # Senpai notice me
+        474235266190540800, # Risen officer
         }
 
-    SARGE = "247195865989513217" # That's me!!! o/
-    HOOLIGANS = "474236074017685506"
+    SARGE = 247195865989513217 # That's me!!! o/
+    HOOLIGANS = 474236074017685506
     GUILD_ROLES = {
-        "539836157656301570", # Leadership
+        539836157656301570, # Leadership
         HOOLIGANS,
-        "474234873763201026", # Senpai Notice Me
-        "474235266190540800", # Officer
-        "475010938148225036" # Lead vegan dev
+        474234873763201026, # Senpai Notice Me
+        474235266190540800, # Officer
+        475010938148225036 # Lead vegan dev
         }
 
     # Adds an entry to the database
     async def addGuildie(self, dName, bName, adder, message, server = None):
         client = self.client
-        await client.send_typing(message.channel)
+        await message.channel.trigger_typing()
         if server == None:
             server = self.server
         dName = dName.replace('@', '')
         dMem = server.get_member_named(dName)
         if dMem == None:
-            await client.send_message(message.channel, Guild.cssMessage("#Error: No user found by name of [" + dName + "] in this server. \n Cancelling operation"))
-            return
+            await message.channel.send(Guild.cssMessage("#Error: No user found by name of [" + dName + "] in this server. \n Adding guildie without a discord. Please update with the correct discord name when available."))
+            #return
 
         # Check if member already exists
         if self.db.containsFamily(bName):
             for mem in self.db.members:
                 if mem.account == bName:
                     print("Member already exists")
-                    await client.send_message(message.channel, Guild.cssMessage("Member already exists with that Family name"))
-                    return
+                    await message.channel.send(Guild.cssMessage("Member already exists with that Family name"))
+                    #return
 
         # Check if member had been in the guild before (Alumni)
         if self.db.containedFamily(bName):
@@ -86,18 +86,20 @@ class Guild:
                     print("Member used to be in guild")
                     self.db.reinstateGuildie(alum, message.author.id)
                     print("Added dName: [" + dName + "]\t[" + bName + "]")
-                    await client.send_message(message.channel, Guild.cssMessage("Welcome back " + dName + "!\n Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+                    await message.channel.send(Guild.cssMessage("Welcome back " + dName + "!\n Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
                     return
 
-        memID = ''
+        memID, memName, memDiscrim = '', '', ''
         if dMem != None:
             memID = dMem.id
-        lst = (memID, dMem.name, dMem.discriminator, bName)
+            memName = dMem.name
+            memDiscrim = dMem.discriminator
+        lst = (memID, memName, memDiscrim, bName)
         mem = Member(lst)
         self.db.insertGuildie(mem, message.author.id)
 
         print("Added dName: [" + dName + "]\t[" + bName + "]")
-        await client.send_message(message.channel, Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+        await message.channel.send(Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
         # Roles
         try:
@@ -115,7 +117,7 @@ class Guild:
     # Removes guildie from database
     async def removeGuildie(self, dName, bName, remover, message, server = None):
         client = self.client
-        await client.send_typing(message.channel)
+        await message.channel.trigger_typing()
         if server == None:
             server = self.server
         if dName == None:
@@ -132,11 +134,11 @@ class Guild:
             lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
             mem = Member(lst)
             self.db.removeGuildie(mem, message.author.id)
-            await client.send_message(message.channel, Guild.cssMessage("Member removed:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+            await message.channel.send(Guild.cssMessage("Member removed:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
             removedSomeone = True
 
         if not removedSomeone:
-            await client.send_message(message.channel, Guild.cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+            await message.channel.send(Guild.cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
         else:
             # Roles
             try:
@@ -155,7 +157,7 @@ class Guild:
     # Update guildie
     async def updateGuildie(self, dName, bName, message, server = None):
         client = self.client
-        await client.send_typing(message.channel)
+        await message.channel.trigger_typing()
         if server == None:
             server = self.server
         print(dName)
@@ -169,21 +171,21 @@ class Guild:
         lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
         mem = Member(lst)
         if self.db.updateGuildie(mem, message.author.id) > 0:
-            await client.send_message(message.channel, Guild.cssMessage("Updated member to the following:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+            await message.channel.send(Guild.cssMessage("Updated member to the following:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
             return
 
-        await client.send_message(message.channel, Guild.cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
+        await message.channel.send(Guild.cssMessage("No matching member found in database for:\n\tDiscord: [" + dName + "]\n\tBDO Family: [" + bName + "]"))
 
     async def updateGuildieDiscord(self, bName, dMem, message):
         if not self.db.containsFamily(bName):
-            await self.client.send_message(message.channel, Guild.cssMessage('No member found with the family [' + bName + ']. Cancelling operation'))
+            await message.channel.send(Guild.cssMessage('No member found with the family [' + bName + ']. Cancelling operation'))
             return
         lst = (dMem.id, dMem.name, dMem.discriminator, bName)
         mem = Member(lst)
         if self.db.updateDiscord(mem, message.author.id) > 0:
-            await self.client.send_message(message.channel, Guild.cssMessage('Updated Discord successfully to [' + str(dMem) + ']'))
+            await message.channel.send(Guild.cssMessage('Updated Discord successfully to [' + str(dMem) + ']'))
         else:
-            await self.client.send_message(message.channel, Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
+            await message.channel.send(Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
 
     # Search for a member in discord and bdo family
     async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False):
@@ -191,7 +193,7 @@ class Guild:
         if server == None:
             server = self.server
         print("Searching for guildie through both discord and bdo")
-        await client.send_typing(message.channel)
+        await message.channel.trigger_typing()
 
         # In case given discriminator
         search = search.split("#")[0]
@@ -252,14 +254,14 @@ class Guild:
                 msg += "\n\n--------------------------------------------"
                 if alt:
                     # Get discord name
-                    disMem = server.get_member(str(mem.id))
+                    disMem = server.get_member(mem.id)
                     disPrint = mem.discord if mem.discord != None else ''
                     if disMem != None:
                         disPrint = disMem.name + "#" + disMem.discriminator
 
                     msg += "\n" + disPrint + " [" + mem.account + "]"
                 else:
-                    m = server.get_member(str(mem.id))
+                    m = server.get_member(mem.id)
                     print(m)
                     memberDiscord = mem.discord
                     if m != None:
@@ -274,10 +276,10 @@ class Guild:
         # Final messages
         if resultFound:            
             print(msg)
-            await client.send_message(message.channel, Guild.cssMessage(msg))
+            await message.channel.send(Guild.cssMessage(msg))
         else:
             print("[" + search + "] was not found")
-            await client.send_message(message.channel, Guild.cssMessage("[" + search + "] was not found"))
+            await message.channel.send(Guild.cssMessage("[" + search + "] was not found"))
 
     async def getFamilyByID(self, dMem):
         msg = ""
@@ -291,13 +293,13 @@ class Guild:
         if server == None:
             server = self.server
         print("Getting list of guild members!")
-        await self.client.send_typing(message.channel)
+        await message.channel.trigger_typing()
         guildList = {}
         msg = ""
         for mem in self.db.members:
             disPrint = mem.discord
             nickPrint = ""
-            dName = server.get_member(str(mem.id))
+            dName = server.get_member(mem.id)
             if dName != None: 
                 disPrint = str(dName)
                 if dName.nick != None:
@@ -323,7 +325,7 @@ class Guild:
 
     # Gets the discrepencies in guild members
     async def getDiscordMissing(self, message, server = None):
-        await self.client.send_typing(message.channel)
+        await message.channel.trigger_typing()
         if server == None:
             server = self.server
 
@@ -331,7 +333,7 @@ class Guild:
         dNameMembers = {}
         print("Getting firbase members")
         for mem in self.db.members:
-            discordMember = server.get_member(str(mem.id))
+            discordMember = server.get_member(mem.id)
             if not discordMember == None:
                 dNameMembers[mem.account] = str(discordMember)
             else:
@@ -368,9 +370,12 @@ class Guild:
             print("Writing")
             with io.open(dir_path + "/guildDiscordMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await self.client.send_message(message.channel, Guild.cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
+            await message.channel.send(Guild.cssMessage("The following members were found in discord as part of the guild but not in BDO:\n\n" + msg))
         if len(bdoMissing) > 0:
+            print("Bdomissing")
+            print(bdoMissing)
             msg = ''
+            unnamed = []
             for mem in bdoMissing:
                 name = mem
                 if name == None or name == "":
@@ -378,17 +383,18 @@ class Guild:
                 msg += name + '\r\n'
                 account = ''
                 for a, d in dNameMembers.items():
-                    if d == mem:
+                    if d == mem and not a in unnamed:
                         account = a
+                        unnamed.append(a)
                         break
 
                 msg += '\t\tFamily Name: ' + account + '\r\n'
             print("Writing")
             with io.open(dir_path + "/guildBdoMissing.txt", "w", encoding="utf-8") as f:
                 f.write(msg)
-            await self.client.send_message(message.channel, Guild.cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
+            await message.channel.send(Guild.cssMessage("The following members were found in BDO as part of the guild but are not a Hooligan:\n\n" + msg))
         if len(bdoMissing) == 0 and len(discordMissing) == 0:
-            await self.client.send_message(message.channel, Guild.cssMessage("All members accounted for!"))
+            await message.channel.send(Guild.cssMessage("All members accounted for!"))
         return
     
     # returns a string that is styled in css way for discord

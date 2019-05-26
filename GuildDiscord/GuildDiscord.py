@@ -19,6 +19,7 @@ import database
 import member
 import guild
 from guild import Guild
+from dungeon import Dungeon
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 stateFileExists = Path(dir_path + '/state').is_file()
@@ -30,6 +31,7 @@ ref = db.reference('Guild')
 risenServer = None
 risenGuild = None
 datab = None
+dungeon = Dungeon()
 
 removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
 updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
@@ -66,24 +68,28 @@ async def on_ready():
     datab = database.Database()
 
     print("The bot is ready!")
-    await client.send_message(client.get_channel(Guild.AUTHORIZED_CHANNELS['test']), "Online!")
-    risenServer = client.get_server('474229539636248596')
+    testChannel = client.get_channel(int(Guild.AUTHORIZED_CHANNELS['test']))
+    print(testChannel)
+    await testChannel.send("Online!")
+    risenServer = client.get_guild(474229539636248596)
     risenGuild = Guild(client, ref, risenServer, datab)
     if not okToRun:
-        await client.change_presence(game=discord.Game(name="Unavailable"))
+        await client.change_presence(activity=discord.Game(name="Unavailable"))
     else:
-        await client.change_presence(game=discord.Game(name="Available"))
+        await client.change_presence(activity=discord.Game(name="Available"))
+
+    print("The bot is really ready!")
 
 @client.event
 async def on_member_remove(member):
-    if not risenServer.id == member.server.id:
+    if not risenServer.id == member.guild.id:
         return
     msg = member.top_role.name + " [" + str(member) + "] has left the server."
     msg = msg.replace('@everyone ', '')
     if member.top_role.id in Guild.GUILD_ROLES:
         msg += risenGuild.getFamilyByID(member.id)
     print(msg)
-    await client.send_message(client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']), Guild.cssMessage(msg))
+    await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
 
 @client.event
 async def on_message(message):
@@ -103,26 +109,26 @@ async def on_message(message):
             with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
                 for line in f:
                     print(line.replace('Available: True', 'Available: False'), end='')
-            await client.send_message(message.channel,Guild.cssMessage("Commands are no longer available"))
+            await message.channel.send(Guild.cssMessage("Commands are no longer available"))
             await client.change_presence(game=discord.Game(name="Unavailable"))
         elif args[1] == 'CONTINUE' or args[1] == 'START':
             okToRun = True
             with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
                 for line in f:
                     print(line.replace('Available: False', 'Available: True'), end='')
-            await client.send_message(message.channel,Guild.cssMessage("Commands are now available"))
+            await message.channel.send(Guild.cssMessage("Commands are now available"))
             await client.change_presence(game=discord.Game(name="Available"))
         print("okToRun changed to [" + str(okToRun) + "]")
 
     elif message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "DATABASE") and Guild.isAuthorizedChannel(message.channel):
         datab.refresh()
-        await client.send_message(message.channel, Guild.cssMessage('Refreshing'))
+        await message.channel.send( Guild.cssMessage('Refreshing'))
 
     # Mission Commands
     elif (m.startswith(Guild.prefix + "MISSION") or m.startswith(Guild.prefix + "MISSIONS")) and Guild.isAuthorizedChannel(message.channel) and okToRun:    
         botOnline = ref.child('BotCommands').child('Online').get()
         if not botOnline:
-            await client.send_message(message.channel,Guild.cssMessage("The bot responsible for handling this request is not online right now."))
+            await message.channel.send(Guild.cssMessage("The bot responsible for handling this request is not online right now."))
             return
 
         args = m.split(" ")
@@ -135,18 +141,18 @@ async def on_message(message):
     # Ping Pong
     elif m.startswith(Guild.prefix + "PING"):
         print("Ping!")
-        roles = message.server.roles
+        roles = message.guild.roles
         msg = ""
         for role in roles:
-            msg += role.id + ":\t" + role.name + "\n"
-        await client.send_message(client.get_channel("259049604627169291"), msg)
-        channels = message.server.channels
+            msg += str(role.id) + ":\t" + role.name + "\n"
+        await client.get_channel(259049604627169291).send(msg)
+        channels = message.guild.channels
         msg = ""
         for channel in channels:
-            msg += channel.id + ":\t" + channel.name + "\n"
-        await client.send_message(client.get_channel("259049604627169291"), msg)
-        await client.send_message(client.get_channel("259049604627169291"), str(message.server.id))
-        await client.send_message(message.channel, "pong!")
+            msg += str(channel.id) + ":\t" + channel.name + "\n"
+        await client.get_channel(259049604627169291).send(msg)
+        await client.get_channel(259049604627169291).send(str(message.guild.id))
+        await message.channel.send( "pong!")
 
     # Help!
     elif m.startswith(Guild.prefix + "HELP"):
@@ -155,25 +161,25 @@ async def on_message(message):
 
     elif m.startswith("<HELP>") and Guild.isDatabaseChannel(message.channel):
         print("Moxie? Is that you?")
-        await client.send_message(message.channel,Guild.cssMessage(addAndRemoveHelpMessage))
+        await message.channel.send(Guild.cssMessage(addAndRemoveHelpMessage))
 
     elif m.startswith("=PAT"):
         time.sleep(2)
-        await client.send_message(message.channel, "There there")
+        await message.channel.send( "There there")
 
     elif m.startswith(Guild.prefix + "SPOILER"):
         c = message.content.split(" ")[1:]
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
-        await client.send_message(message.channel, msg)
+        await message.channel.send( msg)
 
     # Guildie Tracker
     # Check if adding guildie
     if len(addPattern.findall(m)) > 0 and Guild.isDatabaseChannel(message.channel):
         mesg = message.content
         for mention in message.mentions:
-            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
-            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
         a = addPattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -195,8 +201,8 @@ async def on_message(message):
     if len(removePattern.findall(m)) > 0 and Guild.isDatabaseChannel(message.channel):
         mesg = message.content
         for mention in message.mentions:
-            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
-            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
         a = removePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -221,8 +227,8 @@ async def on_message(message):
         print("Updating!")
         mesg = message.content
         for mention in message.mentions:
-            mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
-            mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
+            mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
         a = updatePattern.findall(mesg)
         c = '\n'.join(a)
         b = namesPattern.findall(c)
@@ -239,8 +245,8 @@ async def on_message(message):
         if m.startswith("SEARCH "):
             mesg = message.content
             for mention in message.mentions:
-                mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
-                mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
             alt = m.startswith("-A ")
@@ -255,8 +261,8 @@ async def on_message(message):
         elif m.startswith('UPDATE '):
             mesg = message.content
             for mention in message.mentions:
-                mesg = mesg.replace('<@' + mention.id + '>', str(mention))
-                mesg = mesg.replace('<@!' + mention.id + '>', str(mention))
+                mesg = mesg.replace('<@' + str(mention.id) + '>', str(mention))
+                mesg = mesg.replace('<@!' + str(mention.id) + '>', str(mention))
                 mesg = mesg.replace(Guild.prefix + 'GUILD UPDATE ', '')
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("UPDATE ")
@@ -266,7 +272,7 @@ async def on_message(message):
                 dMem = risenServer.get_member_named(' '.join(m.split(' ')[2:]))
                 if dMem == None:
                     msg = 'No discord member found in this server as [' + ' '.join(m.split(' ')[2:]) + ']'
-                    await client.send_message(message.channel,Guild.cssMessage(msg))
+                    await message.channel.send(Guild.cssMessage(msg))
                 else:
                     await risenGuild.updateGuildieDiscord(bName, dMem, message)
         print("End Guild Ops")
@@ -278,8 +284,8 @@ async def on_message(message):
         if m.startswith("SEARCH"):
             mesg = message.content
             for mention in message.mentions:
-                mesg = mesg.replace("<@" + mention.id + ">", mention.name + "#" + mention.discriminator)
-                mesg = mesg.replace("<@!" + mention.id + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
+                mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
             alt = m.startswith("-A ")
@@ -287,16 +293,18 @@ async def on_message(message):
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
             await risenGuild.searchMembers(mesg[i:], message, group=member.ALUMNI, alt=alt)
-    return
+    
+    if m.startswith(Guild.prefix):
+        await dungeon.parse(message)
 
 # Sends a signal to voice attack to turn in the mission
 async def finishMission(channel):
     alreadyQueued = ref.child('BotCommands').child('FinishMission').get()
 
     if alreadyQueued:
-        await client.send_message(channel,Guild.cssMessage("Already working on it!"))
+        await channel.send(Guild.cssMessage("Already working on it!"))
     else:
-        await client.send_message(channel,Guild.cssMessage("You got it! Finishing mission..."))
+        await channel.send(Guild.cssMessage("You got it! Finishing mission..."))
         ref.child('BotCommands').update({'FinishMission':True})
 
 # Still debating on whether to do the following below. Basically a user can ask the bot
@@ -338,7 +346,7 @@ async def showHelp(ch):
             "# To get a list of mismatched named guild members:\n" +
             "\t[" + Guild.prefix + "guild get missing]"
             )
-    await client.send_message(ch,Guild.cssMessage(helpMessage))
+    await ch.send(Guild.cssMessage(helpMessage))
     return
 
 

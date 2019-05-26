@@ -14,6 +14,8 @@ class Dungeon(object):
 
     async def parse(self, message):
         ch = message.channel if self.channel == None else self.channel
+        if len(message.channel_mentions) > 0:
+            ch = message.channel_mentions[0]
         tosses = message.content.split(' ')
         for toss in tosses:
             if len(self.dicePattern.findall(toss)) > 0:

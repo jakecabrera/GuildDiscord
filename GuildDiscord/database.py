@@ -52,9 +52,63 @@ class Database(object):
         
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM ALUMNI;")
         result = c.fetchall()
-        c.close()
         self.alumni = list(Member(x) for x in result)
 
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_OFFICER\"")
+        self.__helpMessageOfficer = c.fetchall()[0][0]
+
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_MAIN\"")
+        self.__helpMessageMain = c.fetchall()[0][0]
+
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_AAR\"")
+        self.__helpMessageAAR = c.fetchall()[0][0]
+        c.close()
+    
+    @property
+    def helpMessageOfficer(self):
+        return self.__helpMessageOfficer
+
+    @helpMessageOfficer.setter
+    def helpMessageOfficer(self, val):
+        c = self.cursor()
+        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_OFFICER';"
+        c.execute(sql, [val])
+        print('rowcount: ' + str(c.rowcount))
+        c.close()
+        self.mydb.commit()
+        self.mydb.close()
+        self.__helpMessageOfficer = val
+
+    @property
+    def helpMessageMain(self):
+        return self.__helpMessageMain
+
+    @helpMessageMain.setter
+    def helpMessageMain(self, val):
+        c = self.cursor()
+        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_MAIN';"
+        c.execute(sql, [val])
+        print('rowcount: ' + str(c.rowcount))
+        c.close()
+        self.mydb.commit()
+        self.mydb.close()
+        self.__helpMessageMain = val
+
+    @property
+    def helpMessageAAR(self):
+        return self.__helpMessageAAR
+
+    @helpMessageAAR.setter
+    def helpMessageAAR(self, val):
+        c = self.cursor()
+        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_AAR';"
+        c.execute(sql, [val])
+        print('rowcount: ' + str(c.rowcount))
+        c.close()
+        self.mydb.commit()
+        self.mydb.close()
+        self.__helpMessageAAR = val
+       
     def containsFamily(self, family):
         print("checking for family in db")
         for m in self.members:

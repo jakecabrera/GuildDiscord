@@ -53,13 +53,6 @@ with open(dir_path + '/state') as f:
             state[line.split(':')[0].strip()] = line.split(':')[1].strip()
 okToRun = state['Available'] == 'True'
 
-addAndRemoveHelpMessage = ""
-
-with open(dir_path + '/addAndRemoveHelp.txt') as f:
-    content = f.readlines()
-    for line in content:
-        addAndRemoveHelpMessage += line
-
 @client.event
 async def on_ready():
     global risenServer
@@ -157,11 +150,28 @@ async def on_message(message):
     # Help!
     elif m.startswith(Guild.prefix + "HELP"):
         print("Displaying Help Message...")
-        await showHelp(message.channel)
+        if Guild.isAuthorizedChannel(message.channel): await message.channel.send(datab.helpMessageOfficer)
+        else: await message.channel.send(datab.helpMessageMain)
 
     elif m.startswith("<HELP>") and Guild.isDatabaseChannel(message.channel):
         print("Moxie? Is that you?")
-        await message.channel.send(Guild.cssMessage(addAndRemoveHelpMessage))
+        await message.channel.send(datab.helpMessageAAR)
+
+    elif m.startswith(Guild.prefix + "UPDATE HELP "):
+        m = m[len(Guild.prefix + "UPDATE HELP "):]
+        helpMessage = '\n'.join(message.content.splitlines()[1:])
+        if m.startswith('OFFICER'): 
+            print('officer help updated')
+            datab.helpMessageOfficer = helpMessage
+        elif m.startswith('MAIN'): 
+            print('main help updated')
+            datab.helpMessageMain = helpMessage
+        elif m.startswith('AAR'):
+            print('aar help updated')
+            datab.helpMessageAAR = helpMessage
+        await message.channel.send(Guild.cssMessage('Updated help message!'))
+        return
+        
 
     elif m.startswith("=PAT"):
         time.sleep(2)
@@ -307,47 +317,9 @@ async def finishMission(channel):
         await channel.send(Guild.cssMessage("You got it! Finishing mission..."))
         ref.child('BotCommands').update({'FinishMission':True})
 
-# Still debating on whether to do the following below. Basically a user can ask the bot
-# to notify them whenever the registered keywords are found in a message (could be your 
-# name without mention or even something weird like Cats). Gonna have to make it only 
-# notify them for messages that their role has access to though. It will also make my
-# bot parse every single message, so performance wise, maybe not. Also privacy concerns
-# and what not.
-async def enrollInNotifications(message):
-    return
-
-def containsKeyword(message):
-    return
-
-def notify(message):
-    return
-
 # Resets mission to false
 def startMission():
     ref.child('BotCommands').update({'FinishMission':False})
-
-# Display help info
-async def showHelp(ch):
-    helpMessage = (
-        "HELP WINDOW\n\n" +
-        "# Ping:\n" +
-        "\t[" + Guild.prefix + "ping]\n\n" +
-        "# Guild Member Searching:\n" +
-        "# To search by a guild members discord or bdo name use:\n" +
-        "\t[" + Guild.prefix + "guild search <NAME_GOES_HERE>]\n"
-    )
-    if Guild.isAuthorizedChannel(ch):
-        helpMessage += (
-            "# Add [-a] before the name for the above command for\n" + 
-            "# something easier to copy for add-and-remove." +
-            "\n\nSUPER SECRET OFFICER ONLY COMMANDS\n\n" +
-            "# Finish a mission but ONLY IF HERBERT IS AVAILABLE:\n" +
-            "\t[" + Guild.prefix + "mission finish]\n" +
-            "# To get a list of mismatched named guild members:\n" +
-            "\t[" + Guild.prefix + "guild get missing]"
-            )
-    await ch.send(Guild.cssMessage(helpMessage))
-    return
 
 
 TOKEN = ""

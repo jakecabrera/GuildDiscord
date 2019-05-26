@@ -6,10 +6,11 @@ from guild import Guild
 class Dungeon(object):
     def __init__(self, *args, **kwargs):
         # patterns
-        self.rollPattern = re.compile(r'r\d{1,2}d\d{1,2}')
-        self.rollDicePattern = re.compile(r'(?<=\dd)\d{1,2}')
-        self.rollCountPattern = re.compile(r'(?<=r)\d*(?=d)')
-        self.dicePattern = re.compile(r'(?<!\d)d\d*')
+        self.rollPattern = re.compile(r'(?:r\d{1,2})?d\d{1,2}(?:[+|-]\d{1,4})?') # ex r23d6-2
+        self.rollDicePattern = re.compile(r'(?<=d)\d{1,4}') # ex d20
+        self.rollCountPattern = re.compile(r'(?<=r)\d{1,2}(?=d)') # ex r5
+        self.dicePattern = re.compile(r'(?<!\d)d\d*(?:[\+-]\d{1,4})?') # ex d7+4
+        self.mathPattern = re.compile(r'(?<=\d)[\+-]\d{1,4}') # ex +5
         self.channel = None
 
     async def parse(self, message):
@@ -17,24 +18,40 @@ class Dungeon(object):
         if len(message.channel_mentions) > 0:
             ch = message.channel_mentions[0]
         tosses = message.content.split(' ')
-        for toss in tosses:
-            if len(self.dicePattern.findall(toss)) > 0:
-                results = self.dicePattern.findall(toss)
-                for result in results:
-                    outcome = self.roll(int(result[1:]))
-                    await ch.send(Guild.cssMessage(result + ' = '  + str(outcome)))
-            if len(self.rollPattern.findall(toss)) > 0:
-                results = self.rollPattern.findall(toss)
-                for result in results:
-                    sides = int(self.rollDicePattern.findall(result)[0])
-                    rolls = int(self.rollCountPattern.findall(result)[0])
-                    outcomes = list(self.roll(sides) for x in range(rolls))
-                    msg = result + ' ='
-                    for outcome in outcomes:
-                        msg += ' ' + str(outcome) + ','
-                    msg = msg[:-1]
-                    await ch.send(Guild.cssMessage(msg))
-        return
+
+        # Perform each roll
+        results = self.rollPattern.findall(message.content)
+        for result in results:
+            # Get parameters
+            rollsResults = self.rollCountPattern.findall(result)
+            sidesResults = self.rollDicePattern.findall(result)
+            mathResults = self.mathPattern.findall(result)
+            rolls = int(rollsResults[0]) if len(rollsResults) > 0 else 1
+            sides = int(sidesResults[0]) if len(sidesResults) > 0 else 0
+            math = mathResults[0] if len(mathResults) > 0 else ''
+
+            # The roll outcomes
+            outcomes = list(self.roll(sides) for x in range(rolls))
+            value = 0
+            outcomeAddString = ''
+            for outcome in outcomes:
+                value += outcome
+                outcomeAddString += str(outcome) + '+'
+            outcomeAddString = outcomeAddString[:-1]
+
+            # Do math on result
+            if math != '':
+                if math[0:1] == '+': value += int(math[1:])
+                elif math[0:1] == '-': value -= int(math[1:])
+                elif math[0:1] == '*': value *= int(math[1:])
+                elif math[0:1] == '/': value /= int(math[1:])
+
+            # Build output message
+            msg = result + ' = ' + str(value)
+            if math != '' or len(outcomes) > 1:
+                msg += ' (' + outcomeAddString + math + ')'
+
+            await ch.send(Guild.cssMessage(msg))
 
     def roll(self, sides):
         random.seed()

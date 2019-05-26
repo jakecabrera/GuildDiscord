@@ -41,13 +41,6 @@ class Guild:
         "test": 259049604627169291 # Private test channel
         }
 
-    AUTHORIZED_ROLES = {
-        539836157656301570, # Leadership
-        513372116519878716, # Role from my test server
-        474234873763201026, # Senpai notice me
-        474235266190540800, # Risen officer
-        }
-
     SARGE = 247195865989513217 # That's me!!! o/
     HOOLIGANS = 474236074017685506
     GUILD_ROLES = {
@@ -56,6 +49,14 @@ class Guild:
         474234873763201026, # Senpai Notice Me
         474235266190540800, # Officer
         475010938148225036 # Lead vegan dev
+        }
+
+    AUTHORIZED_ROLES = {
+        HOOLIGANS,
+        539836157656301570, # Leadership
+        513372116519878716, # Role from my test server
+        474234873763201026, # Senpai notice me
+        474235266190540800, # Risen officer
         }
 
     # Adds an entry to the database

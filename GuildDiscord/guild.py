@@ -88,25 +88,25 @@ class Guild:
                     self.db.reinstateGuildie(alum, message.author.id)
                     print("Added dName: [" + dName + "]\t[" + bName + "]")
                     await message.channel.send(Guild.cssMessage("Welcome back " + dName + "!\n Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
-                    return
+        
+        else:
+            memID, memName, memDiscrim = 0, '', ''
+            if dMem != None:
+                memID = dMem.id
+                memName = dMem.name
+                memDiscrim = dMem.discriminator
+            lst = (memID, memName, memDiscrim, bName)
+            mem = Member(lst)
+            self.db.insertGuildie(mem, message.author.id)
 
-        memID, memName, memDiscrim = '', '', ''
-        if dMem != None:
-            memID = dMem.id
-            memName = dMem.name
-            memDiscrim = dMem.discriminator
-        lst = (memID, memName, memDiscrim, bName)
-        mem = Member(lst)
-        self.db.insertGuildie(mem, message.author.id)
-
-        print("Added dName: [" + dName + "]\t[" + bName + "]")
-        await message.channel.send(Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
+            print("Added dName: [" + dName + "]\t[" + bName + "]")
+            await message.channel.send(Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
         # Roles
         try:
             if dMem != None:
-                role = discord.utils.get(server.roles, id="474236074017685506") #Become a hooligan
-                altRole = discord.utils.get(server.roles, id="513371978816552960") #Become a boy
+                role = discord.utils.get(server.roles, id=474236074017685506) #Become a hooligan
+                altRole = discord.utils.get(server.roles, id=513371978816552960) #Become a boy
                 if role != None:
                     await client.replace_roles(dMem, role)
                 if altRole != None:
@@ -129,7 +129,7 @@ class Guild:
         if self.db.containsFamily(bName):
             print('family found')
             dMem = server.get_member_named(dName)
-            memID = ''
+            memID = 0
             if dMem != None:
                 memID = dMem.id
             lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
@@ -145,8 +145,8 @@ class Guild:
             try:
                 dMem = server.get_member_named(dName)
                 if dMem != None:
-                    role = discord.utils.get(server.roles, id="485301856004734988") #Become an alumni
-                    altRole = discord.utils.get(server.roles, id="513371906896953344") #Become a someone
+                    role = discord.utils.get(server.roles, id=485301856004734988) #Become an alumni
+                    altRole = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
                     if role != None:
                         await client.replace_roles(dMem, role)
                     if altRole != None:
@@ -165,7 +165,7 @@ class Guild:
         print(bName)
 
         dMem = server.get_member_named(dName)
-        memID = ''
+        memID = 0
         if dMem != None:
             memID = dMem.id
         
@@ -285,7 +285,7 @@ class Guild:
     async def getFamilyByID(self, dMem):
         msg = ""
         for mem in self.db.members:
-            if str(mem.id) == dMem.id:
+            if mem.id == dMem.id:
                 msg += "\nBDO Family: [" + mem.account + "]"
         return msg
 

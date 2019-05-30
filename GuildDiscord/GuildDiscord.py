@@ -79,6 +79,7 @@ async def on_member_remove(member):
         return
     msg = member.top_role.name + " [" + str(member) + "] has left the server."
     msg = msg.replace('@everyone ', '')
+    print('Bye bye ' + str(member))
     if member.top_role.id in Guild.GUILD_ROLES:
         msg += risenGuild.getFamilyByID(member.id)
     print(msg)

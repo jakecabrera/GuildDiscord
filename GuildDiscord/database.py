@@ -133,7 +133,7 @@ class Database(object):
     def insertGuildie(self, mem, operatorID):
         c = self.cursor()
         sql = ""
-        if mem.id != '':
+        if mem.id != None and mem.id != 0:
             sql = "INSERT IGNORE INTO DISCORD VALUES ("
             sql += str(mem.id) + ","
             sql += "%s,"
@@ -183,7 +183,7 @@ class Database(object):
 
                 print("found")
                 result = c.fetchone()
-                if result == None and mem.id != None:
+                if result == None and mem.id != None and mem.id != 0:
                     sql = "INSERT IGNORE INTO DISCORD(D_ID, D_NAME, D_DISCRIMINATOR) VALUES("
                     sql += str(mem.id) + ","
                     sql += "%s,"

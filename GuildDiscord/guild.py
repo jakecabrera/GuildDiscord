@@ -43,6 +43,9 @@ class Guild:
 
     SARGE = 247195865989513217 # That's me!!! o/
     HOOLIGANS = 474236074017685506
+    BOY = 513371978816552960
+    ALUMNI = 485301856004734988
+    SOMEONE = 513371906896953344
     GUILD_ROLES = {
         539836157656301570, # Leadership
         HOOLIGANS,
@@ -65,6 +68,7 @@ class Guild:
         await message.channel.trigger_typing()
         if server == None:
             server = self.server
+            server = message.guild
         dName = dName.replace('@', '')
         dMem = server.get_member_named(dName)
         if dMem == None:
@@ -103,17 +107,18 @@ class Guild:
             await message.channel.send(Guild.cssMessage(" Added Discord: [" + dName + "]\n\tBdo Family: [" + bName + "]"))
 
         # Roles
-        try:
-            if dMem != None:
-                role = discord.utils.get(server.roles, id=474236074017685506) #Become a hooligan
-                altRole = discord.utils.get(server.roles, id=513371978816552960) #Become a boy
-                if role != None:
-                    await client.replace_roles(dMem, role)
-                if altRole != None:
-                    await client.replace_roles(dMem, altRole)
-        except:
-            print("Could not edit roles")
-        return
+        if dMem != None:
+            print('changing role')
+            role = discord.utils.get(server.roles, id=474236074017685506) #Become a hooligan
+            altRole = discord.utils.get(server.roles, id=513371978816552960) #Become a boy
+            print('selected role')
+            if role != None:
+                print('risen')
+                await self.replaceRoles(dMem, role)
+            if altRole != None:
+                print('alt')
+                await self.replaceRoles(dMem, altRole)
+            print('role changed')
 
     # Removes guildie from database
     async def removeGuildie(self, dName, bName, remover, message, server = None):
@@ -121,6 +126,7 @@ class Guild:
         await message.channel.trigger_typing()
         if server == None:
             server = self.server
+            server = message.guild
         if dName == None:
             dName = ""
         dName = dName.replace('@', '')
@@ -148,9 +154,9 @@ class Guild:
                     role = discord.utils.get(server.roles, id=485301856004734988) #Become an alumni
                     altRole = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
                     if role != None:
-                        await client.replace_roles(dMem, role)
+                        await self.replaceRoles(role)
                     if altRole != None:
-                        await client.replace_roles(dMem, altRole)
+                        await self.replaceRoles(altRole)
             except:
                 print("Could not edit roles")
             return
@@ -397,6 +403,12 @@ class Guild:
         if len(bdoMissing) == 0 and len(discordMissing) == 0:
             await message.channel.send(Guild.cssMessage("All members accounted for!"))
         return
+
+    async def replaceRoles(self, member, targetRole):
+        for role in member.roles:
+            if role.name != '@everyone':
+                await member.remove_roles(role)
+        await member.add_roles(targetRole)
     
     # returns a string that is styled in css way for discord
     def cssMessage(msg):

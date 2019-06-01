@@ -148,17 +148,18 @@ class Guild:
             await message.channel.send(Guild.cssMessage("No matching member found in database for:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
         else:
             # Roles
-            try:
-                dMem = server.get_member_named(dName)
-                if dMem != None:
-                    role = discord.utils.get(server.roles, id=485301856004734988) #Become an alumni
-                    altRole = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
-                    if role != None:
-                        await self.replaceRoles(role)
-                    if altRole != None:
-                        await self.replaceRoles(altRole)
-            except:
-                print("Could not edit roles")
+            print('Removing roles')
+            dMem = server.get_member_named(dName)
+            if dMem != None:
+                print('Role change for ' + str(dMem))
+                role = discord.utils.get(server.roles, id=485301856004734988) #Become an alumni
+                altRole = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
+                if role != None:
+                    print('Risen')
+                    await self.replaceRoles(dMem, role)
+                if altRole != None:
+                    print('Alt')
+                    await self.replaceRoles(dMem, altRole)
             return
 
     # Update guildie
@@ -406,7 +407,7 @@ class Guild:
 
     async def replaceRoles(self, member, targetRole):
         for role in member.roles:
-            if role.name != '@everyone':
+            if role.name != '@everyone' and role.position < self.server.me.top_role.position:
                 await member.remove_roles(role)
         await member.add_roles(targetRole)
     

@@ -68,7 +68,6 @@ class Guild:
         await message.channel.trigger_typing()
         if server == None:
             server = self.server
-            server = message.guild
         dName = dName.replace('@', '')
         dMem = server.get_member_named(dName)
         if dMem == None:
@@ -126,7 +125,6 @@ class Guild:
         await message.channel.trigger_typing()
         if server == None:
             server = self.server
-            server = message.guild
         if dName == None:
             dName = ""
         dName = dName.replace('@', '')
@@ -289,10 +287,10 @@ class Guild:
             print("[" + search + "] was not found")
             await message.channel.send(Guild.cssMessage("[" + search + "] was not found"))
 
-    async def getFamilyByID(self, dMem):
+    async def getFamilyByID(self, dMemID):
         msg = ""
         for mem in self.db.members:
-            if mem.id == dMem.id:
+            if mem.id == dMemID:
                 msg += "\nBDO Family: [" + mem.account + "]"
         return msg
 

@@ -81,7 +81,7 @@ async def on_member_remove(member):
     msg = msg.replace('@everyone ', '')
     print('Bye bye ' + str(member))
     if member.top_role.id in Guild.GUILD_ROLES:
-        msg += risenGuild.getFamilyByID(member.id)
+        msg += await risenGuild.getFamilyByID(member.id)
     print(msg)
     await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
 

@@ -35,3 +35,10 @@ class Member:
     
     def hasAccount(self, account):
         return account.upper() in (x.upper() for x in self.accounts)
+
+    # Converts a discord member to a risen member
+    def m2m(mem, account):
+        id = mem.id
+        discordName = mem.name
+        discriminator = mem.discriminator
+        return Member(list(id, discordName, discriminator, account))

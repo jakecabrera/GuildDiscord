@@ -74,14 +74,18 @@ async def on_ready():
     print("The bot is really ready!")
 
 @client.event
-async def on_member_remove(member):
-    if not risenServer.id == member.guild.id:
+async def on_member_remove(discordMember):
+    if not risenServer.id == discordMember.guild.id:
         return
-    msg = member.top_role.name + " [" + str(member) + "] has left the server."
+    msg = discordMember.top_role.name + " [" + str(discordMember) + "] has left the server."
     msg = msg.replace('@everyone ', '')
-    print('Bye bye ' + str(member))
-    if member.top_role.id in Guild.GUILD_ROLES:
-        msg += await risenGuild.getFamilyByID(member.id)
+    print('Bye bye ' + str(discordMember))
+    if discordMember.top_role.id in Guild.GUILD_ROLES:
+        accounts = risenGuild.getFamilyByID(discordMember.id)
+        if len(accounts) > 0:
+            datab.updateDiscord(member.Member.m2m(discordMember, accounts[0]), discordMember.guild.me.id)
+        for account in accounts:
+            msg += '\nBDO Family: [' + account + ']'
     print(msg)
     await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
 

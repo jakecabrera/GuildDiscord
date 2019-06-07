@@ -168,6 +168,52 @@ class Database(object):
         c.close()
         return rowCount
 
+    def updateJoinMessage(self, server, message):
+        c = self.cursor()
+
+        # Make sure server exists
+        sql = 'SELECT * FROM SERVER WHERE SERVER_ID = ' + str(server.id) + ';'
+        c.execute(sql)
+        if c.rowcount == 0:
+            sql = 'INSERT IGNORE INTO SERVER(SERVER_ID, SERVER_NAME) VALUES (' + str(server.id) + ',%s);'
+            c.execute(sql, [server.name])
+
+        # update or add join_message
+        sql = 'SELECT * FROM JOIN_MESSAGE WHERE SERVER_ID = ' + str(server.id) + ';'
+        c.execute(sql)
+        if c.rowcount == 0:
+            sql = 'INSERT IGNORE INTO JOIN_MESSAGE(SERVER_ID, MESSAGE) VALUES (' + str(server.id) + ',%s);'
+            c.execute(sql, [message])
+        else:
+            sql = 'UPDATE JOIN_MESSAGE SET MESSAGE = %s WHERE SERVER_ID = ' + str(server.id) + ';'
+            c.execute(sql, [message])
+
+        rowCount = c.rowcount
+        c.close()
+        self.mydb.commit()
+        return rowCount
+
+    def retrieveJoinMessage(self, server):
+        c = self.cursor()
+        sql = 'SELECT MESSAGE, CHANNEL_ID FROM JOIN_MESSAGE WHERE SERVER_ID = ' + str(server.id) + ';'
+        c.execute(sql)
+
+        joinMessage = ''
+        if c.rowcount > 0:
+            joinMessage = c.fetchall()[0]
+        c.close()
+        return joinMessage
+
+    def updateJoinMessageChannel(self, channel, server):
+        c = self.cursor()
+        sql = 'UPDATE JOIN_MESSAGE SET CHANNEL_ID = ' + str(channel.id) + ' WHERE SERVER_ID = ' + str(server.id) + ';'
+        c.execute(sql)
+
+        rowCount = c.rowcount
+        c.close()
+        self.mydb.commit()
+        return rowCount
+
     # Fix update of family
     def updateGuildie(self, mem, operatorID):
         c = self.cursor()

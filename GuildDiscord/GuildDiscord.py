@@ -90,6 +90,17 @@ async def on_member_remove(discordMember):
     await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
 
 @client.event
+async def on_member_join(discordMember):
+    print('Welcome to ' + discordMember.guild.name + ' user ' + str(discordMember))
+
+    joinMessage = risenGuild.getJoinMessage(discordMember.guild)
+    channel = client.get_channel(joinMessage[1])
+    if joinMessage == None or None in joinMessage or '' in joinMessage or channel == None:
+        return
+
+    await channel.send(joinMessage[0])
+
+@client.event
 async def on_message(message):
     global okToRun
 
@@ -187,6 +198,34 @@ async def on_message(message):
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
         await message.channel.send( msg)
+
+    elif m.startswith(Guild.prefix + "JOIN MESSAGE SET"):
+        msg = '\n'.join(message.content.splitlines()[1:])
+        risenGuild.setJoinMessage(msg, message)
+        await message.channel.send(Guild.cssMessage('Updated!'))
+        return
+
+    elif m.startswith(Guild.prefix + "JOIN MESSAGE GET"):
+        joinMessage = risenGuild.getJoinMessage(message.guild)
+        if joinMessage[0] == '' or joinMessage[0] == None:
+            joinMessage = Guild.cssMessage('The join message has not yet been set')
+        await message.channel.send(joinMessage[0])
+        return
+
+    elif m.startswith(Guild.prefix + "JOIN MESSAGE CHANNEL"):
+        channels = message.channel_mentions
+        if len(channels) > 0:
+            result = risenGuild.setJoinMessageChannel(channels[0], message.guild)
+            if result > 0:
+                await message.channel.send('Set channel for join message output to #' + str(channels[0]))
+            else:
+                await message.channel.send('Set the join message first before choosing a channel')
+        else:
+            ch = client.get_channel(risenGuild.getJoinMessageChannel(message.guild))
+            msg = 'No bound channel'
+            if ch != None:
+                msg = 'Join messages are bound to ' + str(ch)
+            await message.channel.send(msg)
 
     # Guildie Tracker
     # Check if adding guildie

@@ -118,6 +118,7 @@ class Guild:
                 print('alt')
                 await self.replaceRoles(dMem, altRole)
             print('role changed')
+        return
 
     # Removes guildie from database
     async def removeGuildie(self, dName, bName, remover, message, server = None):
@@ -408,6 +409,27 @@ class Guild:
             if role.name != '@everyone' and role.position < self.server.me.top_role.position:
                 await member.remove_roles(role)
         await member.add_roles(targetRole)
+
+    def setJoinMessage(self, msg, message):
+        print('Updating join message for ' + message.guild.name)
+        self.db.updateJoinMessage(message.guild, msg)
+        return
+
+    def getJoinMessage(self, server):
+        print('Retrieving join message for ' + server.name)
+        return self.db.retrieveJoinMessage(server)
+
+    def setJoinMessageChannel(self, channel, guild):
+        print('Setting join message channel')
+        return self.db.updateJoinMessageChannel(channel, guild)
+
+    def getJoinMessageChannel(self, guild):
+        print('Getting join message channel')
+        return self.db.retrieveJoinMessage(guild)[1]
+    
+    ########################################################
+    #   Class Functions
+    ########################################################
     
     # returns a string that is styled in css way for discord
     def cssMessage(msg):

@@ -62,6 +62,11 @@ class Guild:
         474235266190540800, # Risen officer
         }
 
+    IMPORTANT_ROLES = {
+        474234873763201026, # Senpai notice me
+        475010938148225036 # Lead vegan dev
+        }
+
     # Adds an entry to the database
     async def addGuildie(self, dName, bName, adder, message, server = None):
         client = self.client
@@ -459,6 +464,14 @@ class Guild:
     # Returns whether the given user is a valid user for secret commands
     def isValidUser(user):
         for role in Guild.AUTHORIZED_ROLES:
+            if role in [r.id for r in user.roles]:
+                return True
+        return False
+
+    def isImportantUser(user):
+        if user.id == SARGE: 
+            return True
+        for role in Guild.IMPORTANT_ROLES:
             if role in [r.id for r in user.roles]:
                 return True
         return False

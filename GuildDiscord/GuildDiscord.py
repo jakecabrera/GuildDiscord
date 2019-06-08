@@ -195,13 +195,13 @@ async def on_message(message):
         time.sleep(2)
         await message.channel.send( "There there")
 
-    elif m.startswith(Guild.prefix + "SPOILER"):
+    elif m.startswith(Guild.prefix + "SPOILER") and Guild.isImportantUser(message.author):
         c = message.content.split(" ")[1:]
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
         await message.channel.send( msg)
 
-    elif m.startswith(Guild.prefix + "GREETING"):
+    elif m.startswith(Guild.prefix + "GREETING") and Guild.isImportantUser(message.author):
         if len(m[len(Guild.prefix + "GREETING"):].strip()) > 0:
             # setting greeting
             msg = '\n'.join(message.content.splitlines()[1:])
@@ -214,7 +214,7 @@ async def on_message(message):
                 greeting = Guild.cssMessage('The greeting message has not yet been set')
             await message.channel.send(greeting[0])
 
-    elif m.startswith(Guild.prefix + "GREETING CHANNEL"):
+    elif m.startswith(Guild.prefix + "GREETING CHANNEL") and Guild.isImportantUser(message.author):
         channels = message.channel_mentions
         if len(channels) > 0:
             result = risenGuild.greetingChannel(message.guild, channel=channels[0])
@@ -229,7 +229,7 @@ async def on_message(message):
                 msg = 'Greeting messages are bound to <#' + str(ch.id) + '>'
             await message.channel.send(msg)
 
-    elif m.startswith(Guild.prefix + "GREETING DELAY"):
+    elif m.startswith(Guild.prefix + "GREETING DELAY") and Guild.isImportantUser(message.author):
         val = message.content[len(Guild.prefix + "GREETING DELAY"):].strip()
         if len(val) > 0:
             try:

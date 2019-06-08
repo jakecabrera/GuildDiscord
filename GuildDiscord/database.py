@@ -168,7 +168,7 @@ class Database(object):
         c.close()
         return rowCount
 
-    def updateJoinMessage(self, server, message):
+    def updateGreeting(self, server, message):
         c = self.cursor()
 
         # Make sure server exists
@@ -178,14 +178,14 @@ class Database(object):
             sql = 'INSERT IGNORE INTO SERVER(SERVER_ID, SERVER_NAME) VALUES (' + str(server.id) + ',%s);'
             c.execute(sql, [server.name])
 
-        # update or add join_message
-        sql = 'SELECT * FROM JOIN_MESSAGE WHERE SERVER_ID = ' + str(server.id) + ';'
+        # update or add GREETING
+        sql = 'SELECT * FROM GREETING WHERE SERVER_ID = ' + str(server.id) + ';'
         c.execute(sql)
         if c.rowcount == 0:
-            sql = 'INSERT IGNORE INTO JOIN_MESSAGE(SERVER_ID, MESSAGE) VALUES (' + str(server.id) + ',%s);'
+            sql = 'INSERT IGNORE INTO GREETING(SERVER_ID, MESSAGE) VALUES (' + str(server.id) + ',%s);'
             c.execute(sql, [message])
         else:
-            sql = 'UPDATE JOIN_MESSAGE SET MESSAGE = %s WHERE SERVER_ID = ' + str(server.id) + ';'
+            sql = 'UPDATE GREETING SET MESSAGE = %s WHERE SERVER_ID = ' + str(server.id) + ';'
             c.execute(sql, [message])
 
         rowCount = c.rowcount
@@ -193,26 +193,23 @@ class Database(object):
         self.mydb.commit()
         return rowCount
 
-    def retrieveJoinMessage(self, server):
-        c = self.cursor()
-        sql = 'SELECT MESSAGE, CHANNEL_ID FROM JOIN_MESSAGE WHERE SERVER_ID = ' + str(server.id) + ';'
-        c.execute(sql)
+    def retrieveGreeting(self, server):
+        sql = 'SELECT MESSAGE, CHANNEL_ID, DELAY FROM GREETING WHERE SERVER_ID = ' + str(server.id) + ';'
+        result = self.executeCommit(sql, results = True)
+        if result != None and len(result) > 0:
+            return result[0]
+        else:
+            return None
 
-        joinMessage = ''
-        if c.rowcount > 0:
-            joinMessage = c.fetchall()[0]
-        c.close()
-        return joinMessage
+    def updateGreetingChannel(self, channel, server):
+        sql = 'UPDATE GREETING SET CHANNEL_ID = ' + str(channel.id) + ' WHERE SERVER_ID = ' + str(server.id) + ';'
+        return self.executeCommit(sql)
 
-    def updateJoinMessageChannel(self, channel, server):
-        c = self.cursor()
-        sql = 'UPDATE JOIN_MESSAGE SET CHANNEL_ID = ' + str(channel.id) + ' WHERE SERVER_ID = ' + str(server.id) + ';'
-        c.execute(sql)
-
-        rowCount = c.rowcount
-        c.close()
-        self.mydb.commit()
-        return rowCount
+    def updateGreetingDelay(self, n, server):
+        if n > 60 or n < 0:
+            return -1
+        sql = 'UPDATE GREETING SET DELAY = ' + str(n) + ' WHERE SERVER_ID = ' + str(server.id) + ';'
+        return self.executeCommit(sql)
 
     # Fix update of family
     def updateGuildie(self, mem, operatorID):
@@ -324,3 +321,21 @@ class Database(object):
                 charset = self.creds['charset']
                 )
         return self.mydb.cursor(buffered=True)
+
+    def executeCommit(self, sql, lst = None, results = False):
+        c = self.cursor()
+
+        if lst != None:
+            c.execute(sql, lst)
+        else:
+            c.execute(sql)
+
+        output = None
+        if results == True:
+            output = c.fetchall()
+        else:
+            output = c.rowcount
+
+        c.close()
+        self.mydb.commit()
+        return output

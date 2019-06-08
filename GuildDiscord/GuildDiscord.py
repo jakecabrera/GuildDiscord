@@ -93,12 +93,14 @@ async def on_member_remove(discordMember):
 async def on_member_join(discordMember):
     print('Welcome to ' + discordMember.guild.name + ' user ' + str(discordMember))
 
-    joinMessage = risenGuild.getJoinMessage(discordMember.guild)
-    channel = client.get_channel(joinMessage[1])
-    if joinMessage == None or None in joinMessage or '' in joinMessage or channel == None:
+    greeting = risenGuild.greeting(discordMember.guild)
+    channel = client.get_channel(greeting[1])
+    if greeting == None or None in greeting or '' in greeting or channel == None:
         return
 
-    await channel.send(joinMessage[0])
+    time.sleep(greeting[2])
+    greeting = (greeting[0].replace('{{mention}}', discordMember.mention), greeting[1], greeting[2])
+    await channel.send(greeting[0])
 
 @client.event
 async def on_message(message):
@@ -199,33 +201,54 @@ async def on_message(message):
         msg = " ".join(c)
         await message.channel.send( msg)
 
-    elif m.startswith(Guild.prefix + "JOIN MESSAGE SET"):
-        msg = '\n'.join(message.content.splitlines()[1:])
-        risenGuild.setJoinMessage(msg, message)
-        await message.channel.send(Guild.cssMessage('Updated!'))
-        return
+    elif m.startswith(Guild.prefix + "GREETING"):
+        if len(m[len(Guild.prefix + "GREETING"):].strip()) > 0:
+            # setting greeting
+            msg = '\n'.join(message.content.splitlines()[1:])
+            risenGuild.greeting(message.guild, greeting=msg)
+            await message.channel.send(Guild.cssMessage('Updated!'))
+        else:
+            # getting greeting
+            greeting = risenGuild.greeting(message.guild)
+            if greeting == None or None in greeting:
+                greeting = Guild.cssMessage('The greeting message has not yet been set')
+            await message.channel.send(greeting[0])
 
-    elif m.startswith(Guild.prefix + "JOIN MESSAGE GET"):
-        joinMessage = risenGuild.getJoinMessage(message.guild)
-        if joinMessage[0] == '' or joinMessage[0] == None:
-            joinMessage = Guild.cssMessage('The join message has not yet been set')
-        await message.channel.send(joinMessage[0])
-        return
-
-    elif m.startswith(Guild.prefix + "JOIN MESSAGE CHANNEL"):
+    elif m.startswith(Guild.prefix + "GREETING CHANNEL"):
         channels = message.channel_mentions
         if len(channels) > 0:
-            result = risenGuild.setJoinMessageChannel(channels[0], message.guild)
+            result = risenGuild.greetingChannel(message.guild, channel=channels[0])
             if result > 0:
-                await message.channel.send('Set channel for join message output to #' + str(channels[0]))
+                await message.channel.send('Set channel for greeting output to <#' + str(channels[0].id) + '>')
             else:
-                await message.channel.send('Set the join message first before choosing a channel')
+                await message.channel.send('Set the greeting message first before choosing a channel')
         else:
-            ch = client.get_channel(risenGuild.getJoinMessageChannel(message.guild))
+            ch = client.get_channel(risenGuild.greetingChannel(message.guild))
             msg = 'No bound channel'
             if ch != None:
-                msg = 'Join messages are bound to ' + str(ch)
+                msg = 'Greeting messages are bound to <#' + str(ch.id) + '>'
             await message.channel.send(msg)
+
+    elif m.startswith(Guild.prefix + "GREETING DELAY"):
+        val = message.content[len(Guild.prefix + "GREETING DELAY"):].strip()
+        if len(val) > 0:
+            try:
+                delay = int(val)
+                print('delay = ' + str(delay))
+                if delay >= 0:
+                    result = risenGuild.greetingDelay(message.guild, delay)
+                    print('result = ' + str(result))
+                    if result > 0:
+                        await message.channel.send('Set greeting delay to ' + str(delay) + ' seconds.')
+                        return
+            except:
+                print('Cant fit val into an int')
+            await message.channel.send('Please use an integer value 0-60 (represented as seconds) that is not what the delay is already set to.')
+        else:
+            delay = risenGuild.greetingDelay(message.guild)
+            msg = 'Greeting is set to delay for ' + str(delay) + ' seconds.'
+            await message.channel.send(msg)
+
 
     # Guildie Tracker
     # Check if adding guildie

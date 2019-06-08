@@ -410,22 +410,31 @@ class Guild:
                 await member.remove_roles(role)
         await member.add_roles(targetRole)
 
-    def setJoinMessage(self, msg, message):
-        print('Updating join message for ' + message.guild.name)
-        self.db.updateJoinMessage(message.guild, msg)
-        return
+    def greeting(self, guild, greeting = None):
+        if greeting == None:
+            print('Retrieving greeting for ' + guild.name)
+            return self.db.retrieveGreeting(guild)
+        else:
+            print('Updating greeting for ' + guild.name)
+            self.db.updateGreeting(guild, greeting)
+            return
 
-    def getJoinMessage(self, server):
-        print('Retrieving join message for ' + server.name)
-        return self.db.retrieveJoinMessage(server)
+    def greetingChannel(self, guild, channel = None):
+        if channel == None:
+            print('Getting greeting channel')
+            return self.db.retrieveGreeting(guild)[1]
+        else:
+            print('Setting greeting channel')
+            return self.db.updateGreetingChannel(channel, guild)
 
-    def setJoinMessageChannel(self, channel, guild):
-        print('Setting join message channel')
-        return self.db.updateJoinMessageChannel(channel, guild)
+    def greetingDelay(self, guild, delay = -1):
+        if delay < 0:
+            print('Getting greeting delay')
+            return self.db.retrieveGreeting(guild)[2]
+        else:
+            print('Setting greeting delay')
+            return self.db.updateGreetingDelay(delay, guild)
 
-    def getJoinMessageChannel(self, guild):
-        print('Getting join message channel')
-        return self.db.retrieveJoinMessage(guild)[1]
     
     ########################################################
     #   Class Functions

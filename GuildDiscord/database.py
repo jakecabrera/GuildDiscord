@@ -286,7 +286,7 @@ class Database(object):
         sql = "INSERT INTO ADD_AND_REMOVE(G_ID, OPERATION, OPERATOR) VALUES ("
         sql += "(SELECT G_ID FROM GUILDIE WHERE G_FAMILY = \"" + mem.account + "\" LIMIT 1),"
         sql += "\"" + operation + "\","
-        sql += "\"" + str(operatorID) + "\");"
+        sql += str(operatorID) + ");"
         c.execute(sql)
         c.close()
         self.mydb.commit()
@@ -308,6 +308,7 @@ class Database(object):
         self.alumni = list(Member(x) for x in result)
 
     def refresh(self):
+        self.mydb.reconnect()
         self.updateMembers()
         self.updateAlumni()
 

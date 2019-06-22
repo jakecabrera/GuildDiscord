@@ -142,7 +142,9 @@ class Guild:
             memID = 0
             if dMem != None:
                 memID = dMem.id
-            lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
+            lst = (memID, '', '', bName)
+            if dName != "":
+                lst = (memID, dName.split('#')[0], dName.split('#')[1], bName)
             mem = Member(lst)
             self.db.removeGuildie(mem, message.author.id)
             await message.channel.send(Guild.cssMessage("Member removed:\n\tDiscord:    [" + dName + "]\n\tBDO Family: [" + bName + "]"))
@@ -316,7 +318,7 @@ class Guild:
                 disPrint = str(dName)
                 if dName.nick != None:
                     nickPrint = dName.nick
-            elif disPrint == "":
+            elif disPrint == None or disPrint == "":
                 disPrint = "NO_DISCORD_NAME_FOUND"
 
             info = [disPrint]
@@ -333,7 +335,7 @@ class Guild:
             i += 1
         with io.open(dir_path + "/guildList.txt", "w", encoding="utf-8") as f:
             f.write(msg)
-        await self.client.send_file(message.channel, dir_path + "/guildList.txt")
+        await message.channel.send(file=discord.File(dir_path + "/guildList.txt"))
 
     # Gets the discrepencies in guild members
     async def getDiscordMissing(self, message, server = None):

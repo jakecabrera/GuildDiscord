@@ -94,10 +94,10 @@ async def on_member_join(discordMember):
     print('Welcome to ' + discordMember.guild.name + ' user ' + str(discordMember))
 
     greeting = risenGuild.greeting(discordMember.guild)
-    channel = client.get_channel(greeting[1])
-    if greeting == None or None in greeting or '' in greeting or channel == None:
+    if greeting == None or None in greeting or '' in greeting:
         return
 
+    channel = client.get_channel(greeting[1])
     time.sleep(greeting[2])
     greeting = (greeting[0].replace('{{mention}}', discordMember.mention), greeting[1], greeting[2])
     await channel.send(greeting[0])

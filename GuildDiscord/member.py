@@ -41,4 +41,4 @@ class Member:
         id = mem.id
         discordName = mem.name
         discriminator = mem.discriminator
-        return Member(list(id, discordName, discriminator, account))
+        return Member([id, discordName, discriminator, account])

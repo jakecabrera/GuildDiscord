@@ -263,7 +263,7 @@ class Guild:
 
         # Search database against matches
         for mem in dbMembers:
-            if str(mem.id) in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in set(discordMatches).union(set(altDiscordMatches))):
+            if mem.id in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in set(discordMatches).union(set(altDiscordMatches))):
                 resultFound = True
                 msg += "\n\n--------------------------------------------"
                 if alt:

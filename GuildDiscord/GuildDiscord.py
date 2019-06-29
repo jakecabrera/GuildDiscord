@@ -326,11 +326,19 @@ async def on_message(message):
                 mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
-            alt = m.startswith("-A ")
-            if alt:
-                i += len(m.split(" ")[0]) + 1
+            optionPattern = re.compile(r'(?i)(?<=\s-)(?:a|f)(?=\s)')
+            optionResults = optionPattern.findall(mesg)
+            options = set()
+            for result in optionResults:
+                options.add(result.upper())
+            alt = 'A' in options
+            familyOnly = 'F' in options
+            print('Options: ' + str(options))
             print("alt?: " + str(alt))
-            await risenGuild.searchMembers(mesg[i:], message, alt=alt)
+            i += 3 * len(options)
+            print('Message:')
+            print(mesg[i:])
+            await risenGuild.searchMembers(mesg[i:], message, alt=alt, familyOnly=familyOnly)
         elif m.startswith("LIST"):
             await risenGuild.getGuildList(message)
         elif m.startswith("GET MISSING"):

@@ -85,7 +85,7 @@ class Guild:
                 if mem.account == bName:
                     print("Member already exists")
                     await message.channel.send(Guild.cssMessage("Member already exists with that Family name"))
-                    #return
+                    return
 
         # Check if member had been in the guild before (Alumni)
         if self.db.containedFamily(bName):
@@ -114,15 +114,18 @@ class Guild:
         if dMem != None:
             print('changing role')
             role = discord.utils.get(server.roles, id=474236074017685506) #Become a hooligan
-            altRole = discord.utils.get(server.roles, id=513371978816552960) #Become a boy
-            print('selected role')
+            if role == None:
+                print('alt')
+                role = discord.utils.get(server.roles, id=513371978816552960) #Become a boy
+            else:
+                print('risen')
             if role != None:
                 print('risen')
-                await self.replaceRoles(dMem, role)
-            if altRole != None:
-                print('alt')
-                await self.replaceRoles(dMem, altRole)
-            print('role changed')
+                await dMem.edit(roles=[role])
+                if role in dMem.roles:
+                    print('Success')
+                else:
+                    print('Failure')
         return
 
     # Removes guildie from database
@@ -159,13 +162,14 @@ class Guild:
             if dMem != None:
                 print('Role change for ' + str(dMem))
                 role = discord.utils.get(server.roles, id=485301856004734988) #Become an alumni
-                altRole = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
+                if role == None:
+                    role = discord.utils.get(server.roles, id=513371906896953344) #Become a someone
                 if role != None:
-                    print('Risen')
-                    await self.replaceRoles(dMem, role)
-                if altRole != None:
-                    print('Alt')
-                    await self.replaceRoles(dMem, altRole)
+                    await dMem.edit(roles=[role])
+                    if role in dMem.roles:
+                        print('Success')
+                    else:
+                        print('Failure')
             return
 
     # Update guildie
@@ -202,12 +206,18 @@ class Guild:
             await message.channel.send(Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
 
     # Search for a member in discord and bdo family
-    async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False):
+    async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False, familyOnly = False):
         client = self.client
         if server == None:
             server = self.server
         print("Searching for guildie through both discord and bdo")
         await message.channel.trigger_typing()
+
+        if familyOnly == True:
+            families = search.split(' ')
+            for family in families:
+                await self.searchMembers(family, message, alt=alt)
+            return
 
         # In case given discriminator
         search = search.split("#")[0]

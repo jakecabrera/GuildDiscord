@@ -99,7 +99,13 @@ async def on_member_join(discordMember):
 
     channel = client.get_channel(greeting[1])
     time.sleep(greeting[2])
-    greeting = (greeting[0].replace('{{mention}}', discordMember.mention), greeting[1], greeting[2])
+    greetingMsg = greeting[0]
+    # Mention the new player
+    greetingMsg = greetingMsg.replace('{{mention}}', discordMember.mention)
+    # Set up role mentions
+    greetingMsg = greetingMsg.replace('[[role=', '<@')
+    greetingMsg = greetingMsg.replace(']]', '>')
+
     await channel.send(greeting[0])
 
 @client.event
@@ -165,11 +171,20 @@ async def on_message(message):
         await client.get_channel(259049604627169291).send(str(message.guild.id))
         await message.channel.send( "pong!")
 
+    elif m.startswith(Guild.prefix + "GET ROLE IDS"):
+        print("Getting role ids")
+        roles = message.guild.roles
+        msg = ""
+        for role in roles:
+            msg += str(role.id) + ":\t" + role.name + "\n"
+        await client.get_channel(259049604627169291).send(msg)
+
     # Help!
     elif m.startswith(Guild.prefix + "HELP"):
         print("Displaying Help Message...")
-        if Guild.isAuthorizedChannel(message.channel): await message.channel.send(datab.helpMessageOfficer)
-        else: await message.channel.send(datab.helpMessageMain)
+        helpmsg = datab.helpMessageMain
+        if Guild.isAuthorizedChannel(message.channel): helpmsg += datab.helpMessageOfficer
+        await message.channel.send(helpmsg)
 
     elif m.startswith("<HELP>") and Guild.isDatabaseChannel(message.channel):
         print("Moxie? Is that you?")
@@ -192,7 +207,7 @@ async def on_message(message):
         
 
     elif m.startswith("=PAT"):
-        time.sleep(2)
+        time.sleep(1)
         await message.channel.send( "There there")
 
     elif m.startswith(Guild.prefix + "SPOILER") and Guild.isImportantUser(message.author):
@@ -247,6 +262,8 @@ async def on_message(message):
             greeting = risenGuild.greeting(message.guild)
             if greeting == None or None in greeting:
                 greeting = Guild.cssMessage('The greeting message has not yet been set')
+            elif m.startswith(Guild.prefix + "GREETING NO MENTION"):
+                greeting = Guild.cssMessage(greeting)
             await message.channel.send(greeting[0])
 
 

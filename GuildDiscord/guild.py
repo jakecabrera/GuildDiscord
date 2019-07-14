@@ -481,7 +481,7 @@ class Guild:
         return False
 
     def isImportantUser(user):
-        if user.id == SARGE: 
+        if user.id == Guild.SARGE: 
             return True
         for role in Guild.IMPORTANT_ROLES:
             if role in [r.id for r in user.roles]:

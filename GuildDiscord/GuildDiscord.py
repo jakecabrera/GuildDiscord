@@ -201,19 +201,6 @@ async def on_message(message):
         msg = " ".join(c)
         await message.channel.send( msg)
 
-    elif m.startswith(Guild.prefix + "GREETING") and Guild.isImportantUser(message.author):
-        if len(m[len(Guild.prefix + "GREETING"):].strip()) > 0:
-            # setting greeting
-            msg = '\n'.join(message.content.splitlines()[1:])
-            risenGuild.greeting(message.guild, greeting=msg)
-            await message.channel.send(Guild.cssMessage('Updated!'))
-        else:
-            # getting greeting
-            greeting = risenGuild.greeting(message.guild)
-            if greeting == None or None in greeting:
-                greeting = Guild.cssMessage('The greeting message has not yet been set')
-            await message.channel.send(greeting[0])
-
     elif m.startswith(Guild.prefix + "GREETING CHANNEL") and Guild.isImportantUser(message.author):
         channels = message.channel_mentions
         if len(channels) > 0:
@@ -248,6 +235,19 @@ async def on_message(message):
             delay = risenGuild.greetingDelay(message.guild)
             msg = 'Greeting is set to delay for ' + str(delay) + ' seconds.'
             await message.channel.send(msg)
+
+    elif m.startswith(Guild.prefix + "GREETING") and Guild.isImportantUser(message.author):
+        if len(m[len(Guild.prefix + "GREETING"):].strip()) > 0:
+            # setting greeting
+            msg = '\n'.join(message.content.splitlines()[1:])
+            risenGuild.greeting(message.guild, greeting=msg)
+            await message.channel.send(Guild.cssMessage('Updated!'))
+        else:
+            # getting greeting
+            greeting = risenGuild.greeting(message.guild)
+            if greeting == None or None in greeting:
+                greeting = Guild.cssMessage('The greeting message has not yet been set')
+            await message.channel.send(greeting[0])
 
 
     # Guildie Tracker

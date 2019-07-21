@@ -98,15 +98,15 @@ async def on_member_join(discordMember):
         return
 
     channel = client.get_channel(greeting[1])
-    time.sleep(greeting[2])
     greetingMsg = greeting[0]
     # Mention the new player
     greetingMsg = greetingMsg.replace('{{mention}}', discordMember.mention)
     # Set up role mentions
     greetingMsg = greetingMsg.replace('[[role=', '<@')
     greetingMsg = greetingMsg.replace(']]', '>')
-
-    await channel.send(greeting[0])
+    
+    time.sleep(greeting[2])
+    await channel.send(greetingMsg)
 
 @client.event
 async def on_message(message):

@@ -92,7 +92,6 @@ async def on_member_remove(discordMember):
 @client.event
 async def on_member_join(discordMember):
     print('Welcome to ' + discordMember.guild.name + ' user ' + str(discordMember))
-
     greeting = risenGuild.greeting(discordMember.guild)
     if greeting == None or None in greeting or '' in greeting:
         return
@@ -214,7 +213,8 @@ async def on_message(message):
         c = message.content.split(" ")[1:]
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
-        await message.channel.send( msg)
+        await message.edit(content=msg)
+        # await message.channel.send( msg)
 
     elif m.startswith(Guild.prefix + "GREETING CHANNEL") and Guild.isImportantUser(message.author):
         channels = message.channel_mentions

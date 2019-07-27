@@ -343,24 +343,30 @@ async def on_message(message):
                 mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
-            optionPattern = re.compile(r'(?i)(?<=\s-)(?:a|f|x)(?=\s)')
+            optionPattern = re.compile(r'(?i)(?<=\s-)(?:a|f|x|r)(?=\s)')
             optionResults = optionPattern.findall(mesg)
             options = set()
             for result in optionResults:
                 options.add(result.upper())
             alt = 'A' in options
             familyOnly = 'F' in options
-            expired = 'X' in options
+            expired = ('X' in options) if alt else False
+            remove = ('R' in options) if alt else False
             print('Options: ' + str(options))
             print("alt?: " + str(alt))
             i += 3 * len(options)
             print('Message:')
             print(mesg[i:])
             results = "Results for  [" + mesg[i:] + "]:\n\n"
-            results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired)
+            results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired, remove=remove)
             await message.channel.send(Guild.cssMessage(results))
-            if expired:
-                msg = "Please enter the numbers of the results separated by spaces that you wish to add the expired role to."
+            if not Guild.isValidUser(message.author): return
+            if expired or remove:
+                msg = ""
+                if expired:
+                    msg = "Please enter the numbers of the results separated by spaces that you wish to add the expired role to."
+                if remove:
+                    msg = "Please enter the numbers of the results separated by spaces that you wish to remove from the guild."
                 await message.channel.send(Guild.cssMessage(msg))
                 def check(m):
                     return m.channel == message.channel and m.author == message.author
@@ -378,10 +384,13 @@ async def on_message(message):
                             if dMem == None: 
                                 print('member not found')
                                 continue
-                            role = discord.utils.get(risenServer.roles, id=597253708711067658)
-                            await dMem.add_roles(role)
-                            msg += "Role added for " + str(dMem) + '\n'
-                            print('role added')
+                            if expired:
+                                role = discord.utils.get(risenServer.roles, id=597253708711067658)
+                                await dMem.add_roles(role)
+                                msg += "Role added for " + str(dMem) + '\n'
+                                print('role added')
+                            if remove:
+                                await risenGuild.removeGuildie(str(dMem), familyResults[0], message.author, message)
                 await message.channel.send(Guild.cssMessage(msg))
         elif m.startswith("LIST"):
             await risenGuild.getGuildList(message)

@@ -268,7 +268,7 @@ class Guild:
         return msg
 
     # Search for a member in discord and bdo family
-    def searchMembers(self, search, group = member.MEMBERS, alt = False, familyOnly = False, expired = False):
+    def searchMembers(self, search, group = member.MEMBERS, alt = False, familyOnly = False, expired = False, remove = False):
         client = self.client
         server = self.server
         print("Searching for guildie through both discord and bdo")
@@ -280,7 +280,7 @@ class Guild:
             for family in families:
                 msg += self.searchMembers(family, alt=alt)
             msg.strip()
-            if expired:
+            if expired or remove:
                 tmp = msg
                 msg = ""
                 n = 1

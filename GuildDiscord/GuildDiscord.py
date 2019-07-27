@@ -213,8 +213,8 @@ async def on_message(message):
         c = message.content.split(" ")[1:]
         c = list(map(lambda x: "||" + x + "||", c))
         msg = " ".join(c)
-        await message.edit(content=msg)
-        # await message.channel.send( msg)
+        await message.channel.send( msg)
+        await message.delete()
 
     elif m.startswith(Guild.prefix + "GREETING CHANNEL") and Guild.isImportantUser(message.author):
         channels = message.channel_mentions
@@ -343,19 +343,46 @@ async def on_message(message):
                 mesg = mesg.replace("<@!" + str(mention.id) + ">", mention.name + "#" + mention.discriminator)
             m = m[len(m.split(" ")[0]) + 1:]
             i += len("SEARCH ")
-            optionPattern = re.compile(r'(?i)(?<=\s-)(?:a|f)(?=\s)')
+            optionPattern = re.compile(r'(?i)(?<=\s-)(?:a|f|x)(?=\s)')
             optionResults = optionPattern.findall(mesg)
             options = set()
             for result in optionResults:
                 options.add(result.upper())
             alt = 'A' in options
             familyOnly = 'F' in options
+            expired = 'X' in options
             print('Options: ' + str(options))
             print("alt?: " + str(alt))
             i += 3 * len(options)
             print('Message:')
             print(mesg[i:])
-            await risenGuild.searchMembers(mesg[i:], message, alt=alt, familyOnly=familyOnly)
+            results = "Results for  [" + mesg[i:] + "]:\n\n"
+            results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired)
+            await message.channel.send(Guild.cssMessage(results))
+            if expired:
+                msg = "Please enter the numbers of the results separated by spaces that you wish to add the expired role to."
+                await message.channel.send(Guild.cssMessage(msg))
+                def check(m):
+                    return m.channel == message.channel and m.author == message.author
+                response = await client.wait_for('message', check=check, timeout = 60.0)
+                choices = list((a + ")." for a in response.content.split(' ')))
+                selections = results.splitlines()[2:]
+                msg = ""
+                for selection in selections:
+                    for choice in choices:
+                        if selection.startswith(choice):
+                            print(selection.replace(choice + " ",''))
+                            familyPattern = re.compile(r'(?i)(?<=\[).*(?=\])')
+                            familyResults = familyPattern.findall(selection)
+                            dMem = risenGuild.getDiscordByFamily(familyResults[0])
+                            if dMem == None: 
+                                print('member not found')
+                                continue
+                            role = discord.utils.get(risenServer.roles, id=597253708711067658)
+                            await dMem.add_roles(role)
+                            msg += "Role added for " + str(dMem) + '\n'
+                            print('role added')
+                await message.channel.send(Guild.cssMessage(msg))
         elif m.startswith("LIST"):
             await risenGuild.getGuildList(message)
         elif m.startswith("GET MISSING"):
@@ -394,7 +421,10 @@ async def on_message(message):
             if alt:
                 i += len(m.split(" ")[0]) + 1
             print("alt?: " + str(alt))
-            await risenGuild.searchMembers(mesg[i:], message, group=member.ALUMNI, alt=alt)
+            await message.channel.trigger_typing()
+            results = "Results for  [" + mesg[i:] + "]:\n\n"
+            results += risenGuild.searchMembers(mesg[i:], group=member.ALUMNI, alt=alt)
+            await message.channel.send(Guild.cssMessage(results))
     
     if m.startswith(Guild.prefix):
         await dungeon.parse(message)

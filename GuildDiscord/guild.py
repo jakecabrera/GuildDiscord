@@ -205,48 +205,107 @@ class Guild:
         else:
             await message.channel.send(Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
 
+    def getDBMembers(self, group = member.MEMBERS):
+        dbMembers = None
+        if group == member.MEMBERS:
+            dbMembers = self.db.members
+        else:
+            dbMembers = self.db.alumni
+        return dbMembers
+
+    def getDBDiscord(self, group = member.MEMBERS):
+        dbMembers = self.getDBMembers(group)
+        dbDiscord = list()
+        for m in dbMembers:
+            if m.shortDiscord != None:
+                dbDiscord.append(m.shortDiscord)
+        return dbDiscord
+
+    def getDBFamily(self, group = member.MEMBERS):
+        dbMembers = self.getDBMembers(group)
+        bdoMembers = []
+        for mem in dbMembers:
+            bdoMembers.append(mem.account.upper())
+        return bdoMembers
+
+    def getGuildDiscord(self):
+        server = self.server
+        discordMembers = {}
+        for m in server.members:
+            discordMembers[str(m)] = m
+        return discordMembers
+    
+    def getGuildNicks(self):
+        server = self.server
+        nicks = {}
+        for m in server.members:
+            if m.nick != None:
+                nicks[m.nick.upper()] = m
+        return nicks
+
+    def shortSearchDesc(self, mem):
+        server = self.server
+        disMem = server.get_member(mem.id)
+        disPrint = mem.discord if mem.discord != None else ''
+        if disMem != None:
+            disPrint = disMem.name + "#" + disMem.discriminator
+        msg = disPrint + " [" + mem.account + "]"
+        return msg
+
+    def longSearchDesc(self, mem):
+        server = self.server
+        msg = "--------------------------------------------"
+        m = server.get_member(mem.id)
+        memberDiscord = mem.discord
+        if m != None:
+            memberDiscord = str(m)
+        elif memberDiscord == "" or memberDiscord == None:
+            memberDiscord = "NO_DISCORD_NAME_FOUND"
+        msg += "\nDiscord:      [" + memberDiscord + "]\n" + "BDO Family:   [" + mem.account + "]"
+        if m != None and m.nick != None:
+            msg += "\nNickname:     [" + m.nick + "]"
+        msg += "\n--------------------------------------------"
+        return msg
+
     # Search for a member in discord and bdo family
-    async def searchMembers(self, search, message, server = None, group = member.MEMBERS, alt = False, familyOnly = False):
+    def searchMembers(self, search, group = member.MEMBERS, alt = False, familyOnly = False, expired = False):
         client = self.client
-        if server == None:
-            server = self.server
+        server = self.server
         print("Searching for guildie through both discord and bdo")
-        await message.channel.trigger_typing()
+
+        msg = ''
 
         if familyOnly == True:
             families = search.split(' ')
             for family in families:
-                await self.searchMembers(family, message, alt=alt)
-            return
+                msg += self.searchMembers(family, alt=alt)
+            msg.strip()
+            if expired:
+                tmp = msg
+                msg = ""
+                n = 1
+                for line in tmp.splitlines():
+                    if line == "": continue
+                    msg += str(n) + "). " + line + "\n"
+                    n += 1
+            return msg
+
+        # Begin output message
+        resultFound = False
 
         # In case given discriminator
         search = search.split("#")[0]
 
         # Get current discord names
-        discordMembers = {}
-        nicks = {}
-        for m in server.members:
-            discordMembers[str(m)] = m
-            if m.nick != None:
-                nicks[m.nick.upper()] = m
+        discordMembers = self.getGuildDiscord()
+        nicks = self.getGuildNicks()
 
         # Get database members
-        dbMembers = None
-        if group == member.MEMBERS:
-            print('Looking for a current member')
-            dbMembers = self.db.members
-        else:
-            print('Looking for an alumni')
-            dbMembers = self.db.alumni
-        dbDiscord = list()
-        for m in dbMembers:
-            if m.shortDiscord != None:
-                dbDiscord.append(m.shortDiscord)
+        dbMembers = self.getDBMembers(group)
+        dbDiscord = self.getDBDiscord(group)
 
         # Get db familys
-        bdoMembers = []
-        for mem in dbMembers:
-            bdoMembers.append(mem.account.upper())
+        bdoMembers = self.getDBFamily(group)
 
         disMatches = []
         # Check for any matches for the name in discord
@@ -267,50 +326,36 @@ class Guild:
         print(bdoMatches)
         print(altDiscordMatches)
 
-        # Begin output message
-        msg = "Results for  [" + search + "]:"
-        resultFound = False
-
         # Search database against matches
         for mem in dbMembers:
             if mem.id in disMatches or mem.account.upper() in bdoMatches or (mem.shortDiscord != None and mem.shortDiscord.upper() in set(discordMatches).union(set(altDiscordMatches))):
                 resultFound = True
-                msg += "\n\n--------------------------------------------"
                 if alt:
-                    # Get discord name
-                    disMem = server.get_member(mem.id)
-                    disPrint = mem.discord if mem.discord != None else ''
-                    if disMem != None:
-                        disPrint = disMem.name + "#" + disMem.discriminator
-
-                    msg += "\n" + disPrint + " [" + mem.account + "]"
+                    msg += "\n" + self.shortSearchDesc(mem)
                 else:
-                    m = server.get_member(mem.id)
-                    print(m)
-                    memberDiscord = mem.discord
-                    if m != None:
-                        memberDiscord = str(m)
-                    elif memberDiscord == "" or memberDiscord == None:
-                        memberDiscord = "NO_DISCORD_NAME_FOUND"
-                    msg += "\nDiscord:      [" + memberDiscord + "]\n" + "BDO Family:   [" + mem.account + "]"
-                    if m != None and m.nick != None:
-                        msg += "\nNickname:     [" + m.nick + "]"
-                msg += "\n--------------------------------------------"
+                    msg += "\n\n" + self.longSearchDesc(mem)
 
         # Final messages
         if resultFound:            
             print(msg)
-            await message.channel.send(Guild.cssMessage(msg))
+            return msg
         else:
             print("[" + search + "] was not found")
-            await message.channel.send(Guild.cssMessage("[" + search + "] was not found"))
+            return "[" + search + "] was not found"
 
+    # Return family names that correspond with the given discord ID
     def getFamilyByID(self, dMemID):
         matches = list()
         for mem in self.db.members:
             if mem.id == dMemID:
                 matches.append(mem.account)
         return matches
+
+    def getDiscordByFamily(self, family):
+        for m in self.db.members:
+            if m.account == family:
+                return self.server.get_member(m.id)
+        return None
 
     # Get a list of current guild members!
     async def getGuildList(self, message, server = None):

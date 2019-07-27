@@ -360,7 +360,7 @@ async def on_message(message):
             results = "Results for  [" + mesg[i:] + "]:\n\n"
             results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired, remove=remove)
             await message.channel.send(Guild.cssMessage(results))
-            if not Guild.isValidUser(message.author): return
+            if not Guild.isValidUser(message.author) or not Guild.isDatabaseChannel(message.channel): return
             if expired or remove:
                 msg = ""
                 if expired:

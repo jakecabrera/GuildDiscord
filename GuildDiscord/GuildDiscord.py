@@ -7,6 +7,7 @@ import fileinput
 from pathlib import Path
 from difflib import get_close_matches
 from datetime import datetime
+from pytz import timezone
 
 import discord
 from discord.ext import commands
@@ -204,6 +205,46 @@ async def on_message(message):
         await message.channel.send(Guild.cssMessage('Updated help message!'))
         return
         
+    elif m.startswith(Guild.prefix + 'CUDDLE'):
+        dateToConvert = datetime.now()
+        if len(m[7:]) > 0:
+            timezonePattern = re.compile(r'(?i)[a-zA-Z]*$')
+            hourPattern = re.compile(r'(?i)(?<=cuddle )\d{1,2}')
+            dayHalfPattern = re.compile(r'(?i)(?<=\d)(?:AM|PM)(?= )')
+            minutePattern = re.compile(r'(?i)(?<=:)\d{2}')
+            timeFullPattern = re.compile(r'(?i)(?<=cuddle) *\d{1,2}(?::\d\d) *(?:am|pm) *[a-zA-Z]{3}')
+            timePattern = re.compile(r'(?i)(?<=cuddle) *\d{1,2}(?:am|pm) *[a-zA-Z]{3}')
+        
+            tzResult = timezonePattern.findall(m)[0]
+            hours = int(hourPattern.findall(m)[0])
+            dayHalf = dayHalfPattern.findall(m)[0]
+            r = minutePattern.findall(m)
+            minutes = 0
+            if len(r) > 0:
+                minutes = int(r[0])
+            if dayHalf == 'PM':
+                hours += 12
+
+            timezones = {
+                'EST': 'US/Eastern',
+                'EDT': 'US/Eastern',
+                'MST': 'US/Arizona',
+                'PST': 'US/Pacific',
+                'PDT': 'US/Pacific'
+                }
+
+            tz = ''
+            if tzResult in timezones:
+                tz = timezones[tzResult]
+            else:
+                return
+
+            dateToConvert = datetime.now(timezone(tz))
+            dateToConvert = dateToConvert.replace(hour=hours, minute=minutes)
+        dateToConvert = dateToConvert.astimezone(timezone('Australia/Adelaide'))
+
+        timeFormat = dateToConvert.strftime('%I:%M%p %Z')
+        await message.channel.send(timeFormat)
 
     elif m.startswith("=PAT"):
         time.sleep(1)

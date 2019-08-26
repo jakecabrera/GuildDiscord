@@ -36,10 +36,19 @@ dungeon = Dungeon()
 
 removePattern = re.compile(r'<(?:REMOVED|LEFT).*>.*\[.*\]')
 updatePattern = re.compile(r'<UPDATE[D]?.*>.*\[.*\]')
-namesPattern = re.compile(r'(?<=>)[ ]?.*]')
+namesPattern = re.compile(r'(?<=> )[ ]?.*]')
 discordNamePattern = re.compile(r'.*#\d{4}')
-bdoNamePattern = re.compile(r'(?<=\[).*(?=\])')
+bdoNamePattern = re.compile(r'(?<=\[)[A-z0-9]*(?=\])')
 addPattern = re.compile(r'<ADDED>.*\[.*\]')
+
+
+timezones = {
+    'EST': 'US/Eastern',
+    'EDT': 'US/Eastern',
+    'MST': 'US/Arizona',
+    'PST': 'US/Pacific',
+    'PDT': 'US/Pacific'
+    }
 
 # File to check if still available to complete missions or not
 if not stateFileExists:
@@ -113,7 +122,7 @@ async def on_message(message):
     global okToRun
 
     # Return if the message is from unauthorized user
-    if message.author == client.user or not Guild.isValidUser(message.author):
+    if message.author == client.user or not Guild.isValidUser(message.author, message.guild):
         return
 
     m = message.content.upper()
@@ -206,44 +215,44 @@ async def on_message(message):
         return
         
     elif m.startswith(Guild.prefix + 'CUDDLE'):
+        # current time
         dateToConvert = datetime.now()
+        
+        # if a time was actually specified...
         if len(m[7:]) > 0:
+            # Patterns to extract essential info
             timezonePattern = re.compile(r'(?i)[a-zA-Z]*$')
             hourPattern = re.compile(r'(?i)(?<=cuddle )\d{1,2}')
             dayHalfPattern = re.compile(r'(?i)(?<=\d)(?:AM|PM)(?= )')
             minutePattern = re.compile(r'(?i)(?<=:)\d{2}')
-            timeFullPattern = re.compile(r'(?i)(?<=cuddle) *\d{1,2}(?::\d\d) *(?:am|pm) *[a-zA-Z]{3}')
-            timePattern = re.compile(r'(?i)(?<=cuddle) *\d{1,2}(?:am|pm) *[a-zA-Z]{3}')
-        
+            
+            # Extract the time
             tzResult = timezonePattern.findall(m)[0]
             hours = int(hourPattern.findall(m)[0])
             dayHalf = dayHalfPattern.findall(m)[0]
-            r = minutePattern.findall(m)
+            minutesResults = minutePattern.findall(m)
+
+            # Check if minutes were specified
             minutes = 0
-            if len(r) > 0:
-                minutes = int(r[0])
+            if len(minutesResults) > 0:
+                minutes = int(minutesResults[0])
+
+            # Check which half of the day we are using
             if dayHalf == 'PM':
                 hours += 12
 
-            timezones = {
-                'EST': 'US/Eastern',
-                'EDT': 'US/Eastern',
-                'MST': 'US/Arizona',
-                'PST': 'US/Pacific',
-                'PDT': 'US/Pacific'
-                }
-
-            tz = ''
+            # If a timezone is specified then convert the current datetime to that timezone
+            # and set the time for that timezone
             if tzResult in timezones:
-                tz = timezones[tzResult]
+                dateToConvert = datetime.now(timezones[tzResult])
+                dateToConvert = dateToConvert.replace(hour=hours, minute=minutes)
             else:
                 return
 
-            dateToConvert = datetime.now(timezone(tz))
-            dateToConvert = dateToConvert.replace(hour=hours, minute=minutes)
+        # Convert whatever time we specify into cuddle time
         dateToConvert = dateToConvert.astimezone(timezone('Australia/Adelaide'))
-
         timeFormat = dateToConvert.strftime('%I:%M%p %Z')
+
         await message.channel.send(timeFormat)
 
     elif m.startswith("=PAT"):
@@ -326,9 +335,9 @@ async def on_message(message):
                 dName = discordNamePattern.search(x.lstrip()).group()
             #BDO Name
             bName = ""
-            bdoResults = bdoNamePattern.search(x)
-            if not bdoResults == None:
-                bName = bdoResults.group()
+            bdoResults = bdoNamePattern.findall(x)
+            if not len(bdoResults) == 0:
+                bName = bdoResults[-1]
             adder = message.author.name + "#" + message.author.discriminator
             await risenGuild.addGuildie(dName, bName, adder, message)
 
@@ -352,9 +361,9 @@ async def on_message(message):
                 dName = discordNamePattern.search(x.lstrip()).group()
             #BDO Name
             bName = ""
-            bdoResults = bdoNamePattern.search(x)
-            if not bdoResults == None:
-                bName = bdoResults.group()
+            bdoResults = bdoNamePattern.findall(x)
+            if not len(bdoResults) == 0:
+                bName = bdoResults[-1]
             await risenGuild.removeGuildie(dName, bName, remover, message)
             
     # Check if updating guildie
@@ -370,7 +379,7 @@ async def on_message(message):
         for x in b:
             args = x.lstrip().split(" ")
             dName = discordNamePattern.search(x.lstrip()).group()
-            bName = bdoNamePattern.search(x).group()
+            bName = bdoNamePattern.findall(x)[-1]
             await risenGuild.updateGuildie(dName, bName, message)
 
     # Guild operations
@@ -401,7 +410,7 @@ async def on_message(message):
             results = "Results for  [" + mesg[i:] + "]:\n\n"
             results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired, remove=remove)
             await message.channel.send(Guild.cssMessage(results))
-            if not Guild.isValidUser(message.author) or not Guild.isDatabaseChannel(message.channel): return
+            if not Guild.isValidUser(message.author, message.guild) or not Guild.isDatabaseChannel(message.channel): return
             if expired or remove:
                 msg = ""
                 if expired:

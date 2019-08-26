@@ -337,11 +337,11 @@ class Guild:
 
         # Final messages
         if resultFound:            
-            print(msg)
+            print(msg[1:])
             return msg
         else:
             print("[" + search + "] was not found")
-            return "[" + search + "] was not found"
+            return "\n\n[" + search + "] was not found"
 
     # Return family names that correspond with the given discord ID
     def getFamilyByID(self, dMemID):

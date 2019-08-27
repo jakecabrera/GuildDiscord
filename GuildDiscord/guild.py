@@ -273,7 +273,7 @@ class Guild:
         server = self.server
         print("Searching for guildie through both discord and bdo")
 
-        msg = ''
+        msg = '' 
 
         if familyOnly == True:
             families = search.split(' ')
@@ -288,6 +288,8 @@ class Guild:
                     if line == "": continue
                     msg += str(n) + "). " + line + "\n"
                     n += 1
+                msg = "\n" + msg
+            if alt: msg = "\n" + msg
             return msg
 
         # Begin output message

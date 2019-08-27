@@ -398,10 +398,10 @@ async def on_message(message):
             options = set()
             for result in optionResults:
                 options.add(result.upper())
-            alt = 'A' in options
-            familyOnly = 'F' in options
-            expired = ('X' in options) if alt else False
-            remove = ('R' in options) if alt else False
+            expired = 'X' in options
+            remove = 'R' in options and not expired
+            alt = 'A' in options or expired or remove
+            familyOnly = 'F' in options or expired or remove
             print('Options: ' + str(options))
             print("alt?: " + str(alt))
             i += 3 * len(options)

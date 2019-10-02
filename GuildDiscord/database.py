@@ -108,6 +108,21 @@ class Database(object):
         self.mydb.commit()
         self.mydb.close()
         self.__helpMessageAAR = val
+
+    def getSARgroups(self): 
+        c = self.cursor()
+        c.execute("SELECT GROUP_NAME FROM SELF_ASSIGNABLE_ROLES_GROUPS")
+        groups = set()
+        for result in c.fetchall(): groups.add(result[0])
+        c.execute("SELECT ROLE_ID, ROLE_NAME, GROUP_NAME FROM SELF_ASSIGNABLE_ROLES NATURAL JOIN SELF_ASSIGNABLE_ROLES_GROUPS;")
+        sars = dict()
+        for result in c.fetchall():
+            if result[2] in sars:
+                sars[result[2]][result[1]] = result[0]
+            else:
+                sars[result[2]] = dict()
+                sars[result[2]][result[1]] = result[0]
+        return sars
        
     def containsFamily(self, family):
         print("checking for family in db")

@@ -21,6 +21,7 @@ import member
 import guild
 from guild import Guild
 from dungeon import Dungeon
+from sar import SAR
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 stateFileExists = Path(dir_path + '/state').is_file()
@@ -441,7 +442,8 @@ async def on_message(message):
                                 print('role added')
                             if remove:
                                 await risenGuild.removeGuildie(str(dMem), familyResults[0], message.author, message)
-                await message.channel.send(Guild.cssMessage(msg))
+                if not remove: 
+                    await message.channel.send(Guild.cssMessage(msg))
         elif m.startswith("LIST"):
             await risenGuild.getGuildList(message)
         elif m.startswith("GET MISSING"):
@@ -487,6 +489,12 @@ async def on_message(message):
     
     if m.startswith(Guild.prefix):
         await dungeon.parse(message)
+
+    # SAR
+    if m.startswith("=RANK"):
+        print("SAR")
+        sar = SAR(datab, risenServer)
+        await sar.pickGroup(message, client)
 
 # Sends a signal to voice attack to turn in the mission
 async def finishMission(channel):

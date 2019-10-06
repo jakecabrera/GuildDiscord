@@ -365,6 +365,8 @@ async def on_message(message):
             bdoResults = bdoNamePattern.findall(x)
             if not len(bdoResults) == 0:
                 bName = bdoResults[-1]
+            print("bName: " + bName)
+            print("dName: " + dName)
             await risenGuild.removeGuildie(dName, bName, remover, message)
             
     # Check if updating guildie
@@ -429,9 +431,10 @@ async def on_message(message):
                     for choice in choices:
                         if selection.startswith(choice):
                             print(selection.replace(choice + " ",''))
-                            familyPattern = re.compile(r'(?i)(?<=\[).*(?=\])')
+                            familyPattern = re.compile(r'(?<=\[)[A-z0-9]*(?=\])')
                             familyResults = familyPattern.findall(selection)
-                            dMem = risenGuild.getDiscordByFamily(familyResults[0])
+                            family = familyResults[-1]
+                            dMem = risenGuild.getDiscordByFamily(family)
                             if dMem == None: 
                                 print('member not found')
                                 continue
@@ -441,7 +444,7 @@ async def on_message(message):
                                 msg += "Role added for " + str(dMem) + '\n'
                                 print('role added')
                             if remove:
-                                await risenGuild.removeGuildie(str(dMem), familyResults[0], message.author, message)
+                                await risenGuild.removeGuildie(str(dMem), family, message.author, message)
                 if not remove: 
                     await message.channel.send(Guild.cssMessage(msg))
         elif m.startswith("LIST"):

@@ -523,9 +523,10 @@ class Guild:
     # Returns whether the given user is a valid user for secret commands
     def isValidUser(user, guild):
         user = guild.get_member(user.id)
-        for role in Guild.AUTHORIZED_ROLES:
-            if role in [r.id for r in user.roles]:
-                return True
+        if user != None:
+            for role in Guild.AUTHORIZED_ROLES:
+                if role in [r.id for r in user.roles]:
+                    return True
         return False
 
     def isImportantUser(user):

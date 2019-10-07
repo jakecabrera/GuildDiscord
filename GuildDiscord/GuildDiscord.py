@@ -101,6 +101,15 @@ async def on_member_remove(discordMember):
     await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
 
 @client.event
+async def on_user_update(before, after):    
+    if str(before) == str(after): return
+    if not Guild.isValidUser(before, risenServer): return
+    msg = str(before) + " changed their username to " + str(after)
+    print(msg)
+    await client.get_channel(Guild.DATABASE_CHANNELS['addAndRemove']).send(Guild.cssMessage(msg))
+    return
+
+@client.event
 async def on_member_join(discordMember):
     print('Welcome to ' + discordMember.guild.name + ' user ' + str(discordMember))
     greeting = risenGuild.greeting(discordMember.guild)
@@ -435,16 +444,20 @@ async def on_message(message):
                             familyResults = familyPattern.findall(selection)
                             family = familyResults[-1]
                             dMem = risenGuild.getDiscordByFamily(family)
-                            if dMem == None: 
-                                print('member not found')
-                                continue
-                            if expired:
-                                role = discord.utils.get(risenServer.roles, id=597253708711067658)
-                                await dMem.add_roles(role)
-                                msg += "Role added for " + str(dMem) + '\n'
-                                print('role added')
-                            if remove:
-                                await risenGuild.removeGuildie(str(dMem), family, message.author, message)
+                            if dMem != None:
+                                if expired:
+                                    role = discord.utils.get(risenServer.roles, id=597253708711067658)
+                                    await dMem.add_roles(role)
+                                    msg += "Role added for " + str(dMem) + '\n'
+                                    print('role added')
+                                if remove:
+                                    await risenGuild.removeGuildie(str(dMem), family, message.author, message)
+                            elif family != None:
+                                print("No discord found for " + family)
+                                if expired:
+                                    msg += "No roled added to family [" + family + "] because there was no discord found\n"
+                                if remove:
+                                    await risenGuild.removeGuildie('', family, message.author, message)
                 if not remove: 
                     await message.channel.send(Guild.cssMessage(msg))
         elif m.startswith("LIST"):
@@ -492,6 +505,24 @@ async def on_message(message):
     
     if m.startswith(Guild.prefix):
         await dungeon.parse(message)
+
+    if m.startswith(Guild.prefix + "WHO HAS "):
+        msgs = list()
+        if len(message.role_mentions) == 0: 
+            msgs.append("Did you forget to mention a role?")
+        else:
+            msg = ''
+            role = message.role_mentions[0]
+            for m in risenServer.members:
+                if role in m.roles:
+                    addStr = str(m) + "\n"
+                    if len(Guild.cssMessage(msg + addStr)) > 2000:
+                        msgs.append(msg)
+                        msg = ''
+                    msg += addStr
+        for msg in msgs:
+            await message.channel.send(Guild.cssMessage(msg))
+
 
     # SAR
     if m.startswith("=RANK"):

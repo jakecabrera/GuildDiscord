@@ -507,19 +507,31 @@ async def on_message(message):
         await dungeon.parse(message)
 
     if m.startswith(Guild.prefix + "WHO HAS "):
+        print("who has?")
         msgs = list()
-        if len(message.role_mentions) == 0: 
+        role = None
+        if len(message.role_mentions) == 0:
+            print("no role mentions")
+            roleId = int(message.content[len(Guild.prefix + "WHO HAS "):])
+            role = risenServer.get_role(roleId)
+            print(role)
+        else:
+            print("found the first mentioned role")
+            role = message.role_mentions[0]
+
+        if role == None:
+            print("Could not find the role you wanted")
             msgs.append("Did you forget to mention a role?")
         else:
             msg = ''
-            role = message.role_mentions[0]
-            for m in risenServer.members:
-                if role in m.roles:
-                    addStr = str(m) + "\n"
+            for mem in risenServer.members:
+                if role in mem.roles:
+                    addStr = str(mem) + "\n"
                     if len(Guild.cssMessage(msg + addStr)) > 2000:
                         msgs.append(msg)
                         msg = ''
                     msg += addStr
+            msgs.append(msg)
         for msg in msgs:
             await message.channel.send(Guild.cssMessage(msg))
 

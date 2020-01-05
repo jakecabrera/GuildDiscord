@@ -1,0 +1,57 @@
+```CSS
+HELP WINDOW
+
+# Ping:
+	[&ping]	
+
+# Guild Member Searching:
+# To search by a guild members discord or bdo name use:
+	[&guild search <NAME_GOES_HERE>]
+# Add [-a] before the name for the above command for
+# something easier to copy for add-and-remove.
+# Add [-f] before the name for the above command to search for
+# multiple family names at once separated by spaces
+```
+
+```CSS
+SUPER SECRET OFFICER ONLY COMMANDS
+
+# Finish a mission but ONLY IF HERBERT IS AVAILABLE:
+	[&mission finish]
+# To get a list of mismatched named guild members:
+	[&guild get missing]
+# To get the ids of the roles in this discord
+	[&get role ids]
+# Greetings
+	[&greeting] Returns the current greeting for this server if 
+		this command is used alone, otherwise, 
+		anything written in that message below the 
+		command line becomes the greeting.
+	[&greeting channel (channel_mention)] If a channel is 
+		mentioned, bind the greeting to that channel, 
+		otherwise return the currently bound channel.
+	[&greeting delay (delay amount in seconds)] If a delay 
+	    amount is specified, set the delay of the 
+		greeting message, otherwise return the current 
+		delay amount. Delays can be as small as 0s 
+		and as large as 60s(why tho?).
+```
+
+```CSS
+<ADDED> discord_name#1234 [bdo_family_name] 
+<REMOVED> discord_name#1234 [bdo_family_name] 
+<LEFT> discord_name#1234 [bdo_family_name] 
+
+The above are the ones Herbert officially recognizes so far. so basically you state in angle brackets '<>' what is happening, then you put their discord name with the discriminator (the numbers that follow the name), and then you put the bdo *family* name in square brackets '[]'. 
+
+If you are adding someone to the guild and for some weird reason you don't know their discord name, it is **okay** to omit the discord name as so: 
+<ADDED> [bdo_family_name] 
+
+If they have a cool down, can't join just yet, or is added as a friendo for any reason, the format is as follows: 
+<FRIENDO (reason why friendo)> discord_name#1234 [bdo_family_name] 
+example: 
+<FRIENDO 24h COOLDOWN> sarge841#8833 [Aeldrelm] 
+
+With friendo, a lot of the times you won't know the bdo family name when friendoing. In those cases, omitting the bdo family name is **okay**. Like so: 
+<FRIENDO> sarge841#8833 []
+```

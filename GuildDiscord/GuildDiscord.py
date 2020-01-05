@@ -12,10 +12,6 @@ from pytz import timezone
 import discord
 from discord.ext import commands
 
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
-
 import database
 import member
 import guild
@@ -23,13 +19,7 @@ from guild import Guild
 from dungeon import Dungeon
 from sar import SAR
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-stateFileExists = Path(dir_path + '/state').is_file()
-
 client = discord.Client()
-cred = credentials.Certificate(dir_path + '/risen-59032-ffc0d0af3cc4.json')
-default_app = firebase_admin.initialize_app(cred, {'databaseURL': 'https://risen-59032.firebaseio.com/'})
-ref = db.reference('Guild')
 risenServer = None
 risenGuild = None
 datab = None
@@ -51,19 +41,6 @@ timezones = {
     'PDT': 'US/Pacific'
     }
 
-# File to check if still available to complete missions or not
-if not stateFileExists:
-    with open(dir_path + '/state', 'x') as f:
-        f.write("Available: False\n")
-
-state = {}
-with open(dir_path + '/state') as f:
-    content = f.readlines()
-    for line in content:
-        if line != '' or not line.startswith('#'):
-            state[line.split(':')[0].strip()] = line.split(':')[1].strip()
-okToRun = state['Available'] == 'True'
-
 @client.event
 async def on_ready():
     global risenServer
@@ -76,12 +53,8 @@ async def on_ready():
     print(testChannel)
     await testChannel.send("Online!")
     risenServer = client.get_guild(474229539636248596)
-    risenGuild = Guild(client, ref, risenServer, datab)
-    if not okToRun:
-        await client.change_presence(activity=discord.Game(name="Unavailable"))
-    else:
-        await client.change_presence(activity=discord.Game(name="Available"))
-
+    risenGuild = Guild(client, risenServer, datab)
+    await client.change_presence(activity=discord.Game(name="Beans"))
     print("The bot is really ready!")
 
 @client.event
@@ -120,6 +93,8 @@ async def on_member_join(discordMember):
     greetingMsg = greeting[0]
     # Mention the new player
     greetingMsg = greetingMsg.replace('{{mention}}', discordMember.mention)
+    print('Greeting message')
+    print(greetingMsg)
     # Set up role mentions
     greetingMsg = greetingMsg.replace('[[role=', '<@')
     greetingMsg = greetingMsg.replace(']]', '>')
@@ -137,60 +112,7 @@ async def on_message(message):
 
     m = message.content.upper()
     
-    # Set State
-    if message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "STATE") and Guild.isAuthorizedChannel(message.channel):
-        args = m.split(" ")
-        if args[1] == 'STOP' or args[1] == 'PAUSE':
-            okToRun = False
-            with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
-                for line in f:
-                    print(line.replace('Available: True', 'Available: False'), end='')
-            await message.channel.send(Guild.cssMessage("Commands are no longer available"))
-            await client.change_presence(game=discord.Game(name="Unavailable"))
-        elif args[1] == 'CONTINUE' or args[1] == 'START':
-            okToRun = True
-            with fileinput.FileInput(dir_path + '/state', inplace=True, backup='.bak') as f:
-                for line in f:
-                    print(line.replace('Available: False', 'Available: True'), end='')
-            await message.channel.send(Guild.cssMessage("Commands are now available"))
-            await client.change_presence(game=discord.Game(name="Available"))
-        print("okToRun changed to [" + str(okToRun) + "]")
-
-    elif message.author.id == Guild.SARGE and m.startswith(Guild.prefix + "DATABASE") and Guild.isAuthorizedChannel(message.channel):
-        datab.refresh()
-        await message.channel.send( Guild.cssMessage('Refreshing'))
-
-    # Mission Commands
-    elif (m.startswith(Guild.prefix + "MISSION") or m.startswith(Guild.prefix + "MISSIONS")) and Guild.isAuthorizedChannel(message.channel) and okToRun:    
-        botOnline = ref.child('BotCommands').child('Online').get()
-        if not botOnline:
-            await message.channel.send(Guild.cssMessage("The bot responsible for handling this request is not online right now."))
-            return
-
-        args = m.split(" ")
-        if args[1] == 'FINISH':
-            print("Attempting to finish mission...")
-            await finishMission(message.channel)
-        elif args[1] == 'START': # doesn't really do anything yet
-            startMission()
-
-    # Ping Pong
-    elif m.startswith(Guild.prefix + "PING"):
-        print("Ping!")
-        roles = message.guild.roles
-        msg = ""
-        for role in roles:
-            msg += str(role.id) + ":\t" + role.name + "\n"
-        await client.get_channel(259049604627169291).send(msg)
-        channels = message.guild.channels
-        msg = ""
-        for channel in channels:
-            msg += str(channel.id) + ":\t" + channel.name + "\n"
-        await client.get_channel(259049604627169291).send(msg)
-        await client.get_channel(259049604627169291).send(str(message.guild.id))
-        await message.channel.send( "pong!")
-
-    elif m.startswith(Guild.prefix + "GET ROLE IDS"):
+    if m.startswith(Guild.prefix + "GET ROLE IDS"):
         print("Getting role ids")
         roles = message.guild.roles
         msg = ""
@@ -420,7 +342,7 @@ async def on_message(message):
             print('Message:')
             print(mesg[i:])
             results = "Results for  [" + mesg[i:] + "]:"
-            results += risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired, remove=remove)
+            results += await risenGuild.searchMembers(mesg[i:], alt=alt, familyOnly=familyOnly, expired = expired, remove=remove)
             await message.channel.send(Guild.cssMessage(results))
             if not Guild.isValidUser(message.author, message.guild) or not Guild.isDatabaseChannel(message.channel): return
             if expired or remove:
@@ -500,7 +422,7 @@ async def on_message(message):
             print("alt?: " + str(alt))
             await message.channel.trigger_typing()
             results = "Results for  [" + mesg[i:] + "]:\n\n"
-            results += risenGuild.searchMembers(mesg[i:], group=member.ALUMNI, alt=alt)
+            results += await risenGuild.searchMembers(mesg[i:], group=member.ALUMNI, alt=alt)
             await message.channel.send(Guild.cssMessage(results))
     
     if m.startswith(Guild.prefix):
@@ -542,23 +464,8 @@ async def on_message(message):
         sar = SAR(datab, risenServer)
         await sar.pickGroup(message, client)
 
-# Sends a signal to voice attack to turn in the mission
-async def finishMission(channel):
-    alreadyQueued = ref.child('BotCommands').child('FinishMission').get()
-
-    if alreadyQueued:
-        await channel.send(Guild.cssMessage("Already working on it!"))
-    else:
-        await channel.send(Guild.cssMessage("You got it! Finishing mission..."))
-        ref.child('BotCommands').update({'FinishMission':True})
-
-# Resets mission to false
-def startMission():
-    ref.child('BotCommands').update({'FinishMission':False})
-
-
 TOKEN = ""
-with open(dir_path + '/token', 'r') as t:
+with open('token', 'r') as t:
     TOKEN = t.read().replace('\n','')
 
 client.run(TOKEN, bot=True)

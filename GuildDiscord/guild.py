@@ -11,9 +11,6 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-import firebase_admin
-
-import discord
 import member
 from member import Member
 
@@ -22,10 +19,9 @@ import database
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class Guild:
-    def __init__(self, client, ref, server, db):
+    def __init__(self, client, server, db):
         self.server = server
         self.client = client
-        self.ref = ref
         self.db = db
         assert isinstance(self.db, database.Database)
 
@@ -205,24 +201,41 @@ class Guild:
         else:
             await message.channel.send(Guild.cssMessage('Somehow nothing happened. That was weird. Hopefully sarge fixes this at somepoint'))
 
-    def getDBMembers(self, group = member.MEMBERS):
+    async def getMembersFromId(self, members):
+        for m in members:
+            if m.id != None and m.discord == None:
+                mem = self.server.get_member(m.id)
+                if mem == None:
+                    mem = self.client.get_user(m.id)
+                if mem == None:
+                    try:
+                        mem = await self.client.fetch_user(m.id)
+                    except:
+                        print('no user found for id ' + str(m.id))
+                if mem != None:
+                    m.discord = str(mem)
+                    m.shortDiscord = mem.name
+                    self.db.updateDiscord(m, self.client.user.id)
+                else:
+                    print(m.account + ' Still has no name')
+
+    async def getDBMembers(self, group = member.MEMBERS):
         dbMembers = None
         if group == member.MEMBERS:
             dbMembers = self.db.members
         else:
             dbMembers = self.db.alumni
+        await self.getMembersFromId(dbMembers)
         return dbMembers
 
-    def getDBDiscord(self, group = member.MEMBERS):
-        dbMembers = self.getDBMembers(group)
+    async def getDBDiscord(self, dbMembers):
         dbDiscord = list()
         for m in dbMembers:
             if m.shortDiscord != None:
                 dbDiscord.append(m.shortDiscord)
         return dbDiscord
 
-    def getDBFamily(self, group = member.MEMBERS):
-        dbMembers = self.getDBMembers(group)
+    async def getDBFamily(self, dbMembers):
         bdoMembers = []
         for mem in dbMembers:
             bdoMembers.append(mem.account.upper())
@@ -268,7 +281,7 @@ class Guild:
         return msg
 
     # Search for a member in discord and bdo family
-    def searchMembers(self, search, group = member.MEMBERS, alt = False, familyOnly = False, expired = False, remove = False):
+    async def searchMembers(self, search, group = member.MEMBERS, alt = False, familyOnly = False, expired = False, remove = False):
         client = self.client
         server = self.server
         print("Searching for guildie through both discord and bdo")
@@ -278,7 +291,7 @@ class Guild:
         if familyOnly == True:
             families = search.split(' ')
             for family in families:
-                msg += self.searchMembers(family, alt=alt)
+                msg += await self.searchMembers(family, alt=alt)
             msg.strip()
             if expired or remove:
                 tmp = msg
@@ -303,11 +316,11 @@ class Guild:
         nicks = self.getGuildNicks()
 
         # Get database members
-        dbMembers = self.getDBMembers(group)
-        dbDiscord = self.getDBDiscord(group)
+        dbMembers = await self.getDBMembers(group)
+        dbDiscord = await self.getDBDiscord(dbMembers)
 
         # Get db familys
-        bdoMembers = self.getDBFamily(group)
+        bdoMembers = await self.getDBFamily(dbMembers)
 
         disMatches = []
         # Check for any matches for the name in discord
@@ -405,10 +418,12 @@ class Guild:
         print("Getting firbase members")
         for mem in self.db.members:
             discordMember = server.get_member(mem.id)
-            if not discordMember == None:
-                dNameMembers[mem.account] = str(discordMember)
-            else:
-                dNameMembers[mem.account] = mem.discord
+            if discordMember == None:
+                discordMember = self.client.get_user(mem.id)
+                if discordMember == None:
+                    dNameMembers[mem.account] = mem.discord
+                    continue
+            dNameMembers[mem.account] = str(discordMember)
 
         # Get all hooligans from discord
         hooligans = []

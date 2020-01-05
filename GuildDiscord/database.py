@@ -4,14 +4,12 @@ import io
 import collections
 import time
 import fileinput
+import pyodbc
 from pathlib import Path
 from difflib import get_close_matches
 from datetime import datetime
 
-import firebase_admin
 from member import Member
-
-import mysql.connector
 
 ACCOUNTS = "Accounts"
 ADDEDBY = "AddedBy"
@@ -26,22 +24,21 @@ TIMES_REMOVED = "TimesRemoved"
 
 class Database(object):
     def __init__(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        creds = {}
+        #dir_path = os.path.dirname(os.path.realpath(__file__))
+        #creds = {}
         print('Initializing database object')
-        with open(dir_path + "/dbcred") as f:
-            content = f.readlines()
-            for line in content:
-                if line != '' or not line.startswith('#'):
-                    creds[line.split('=')[0].strip()] = line.split('=')[1].strip()
-        self.creds = creds
+        #with open(dir_path + "/dbcred") as f:
+        #    content = f.readlines()
+        #    for line in content:
+        #        if line != '' or not line.startswith('#'):
+        #            creds[line.split('=')[0].strip()] = line.split('=')[1].strip()
+        #self.creds = creds
 
-        self.mydb = mysql.connector.connect(
-            host = creds['host'],
-            user = creds['user'],
-            passwd = creds['passwd'],
-            database = creds['database'],
-            charset = creds['charset']
+        self.mydb = pyodbc.connect(
+            "Driver={SQL Server Native Client 11.0};"
+            "Server=localhost;"
+            "Database=test;"
+            "Trusted_Connection=yes;"
             )
 
         c = self.cursor()
@@ -53,14 +50,15 @@ class Database(object):
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM ALUMNI;")
         result = c.fetchall()
         self.alumni = list(Member(x) for x in result)
+        print(len(self.alumni))
 
-        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_OFFICER\"")
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = 'HELP_OFFICER'")
         self.__helpMessageOfficer = c.fetchall()[0][0]
 
-        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_MAIN\"")
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = 'HELP_MAIN\'")
         self.__helpMessageMain = c.fetchall()[0][0]
 
-        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = \"HELP_AAR\"")
+        c.execute("SELECT M_VALUE FROM MESSAGES WHERE M_NAME = 'HELP_AAR'")
         self.__helpMessageAAR = c.fetchall()[0][0]
         c.close()
     
@@ -71,7 +69,7 @@ class Database(object):
     @helpMessageOfficer.setter
     def helpMessageOfficer(self, val):
         c = self.cursor()
-        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_OFFICER';"
+        sql = "UPDATE MESSAGES SET M_VALUE = ? WHERE M_NAME = 'HELP_OFFICER';"
         c.execute(sql, [val])
         print('rowcount: ' + str(c.rowcount))
         c.close()
@@ -86,7 +84,7 @@ class Database(object):
     @helpMessageMain.setter
     def helpMessageMain(self, val):
         c = self.cursor()
-        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_MAIN';"
+        sql = "UPDATE MESSAGES SET M_VALUE = ? WHERE M_NAME = 'HELP_MAIN';"
         c.execute(sql, [val])
         print('rowcount: ' + str(c.rowcount))
         c.close()
@@ -101,7 +99,7 @@ class Database(object):
     @helpMessageAAR.setter
     def helpMessageAAR(self, val):
         c = self.cursor()
-        sql = "UPDATE MESSAGES SET M_VALUE = %s WHERE M_NAME = 'HELP_AAR';"
+        sql = "UPDATE MESSAGES SET M_VALUE = ? WHERE M_NAME = 'HELP_AAR';"
         c.execute(sql, [val])
         print('rowcount: ' + str(c.rowcount))
         c.close()
@@ -139,7 +137,7 @@ class Database(object):
 
     def reinstateGuildie(self, mem, operatorID):
         c = self.cursor()
-        c.execute("UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = %s;", [mem.account])
+        c.execute("UPDATE GUILDIE SET G_CURRENT_MEMBER = 1 WHERE G_FAMILY = ?;", [mem.account])
         c.close()
         self.documentOperation(mem, operatorID, "ADD")
         self.updateMembers()
@@ -149,18 +147,21 @@ class Database(object):
         c = self.cursor()
         sql = ""
         if mem.id != None and mem.id != 0:
-            sql = "INSERT IGNORE INTO DISCORD VALUES ("
-            sql += str(mem.id) + ","
-            sql += "%s,"
-            sql += "\"" + mem.discord.split("#")[1] + "\");"
-            name = mem.discord.split("#")[0]
-            c.execute(sql, [name])
+            try:
+                sql = "INSERT INTO DISCORD VALUES ("
+                sql += str(mem.id) + ","
+                sql += "?,"
+                sql += "\"" + mem.discord.split("#")[1] + "\") "
+                name = mem.discord.split("#")[0]
+                c.execute(sql, [name])
+            except:
+                print('Something went wrong with entering discord into db')
 
             sql = "INSERT INTO GUILDIE(D_ID, G_FAMILY) VALUES("
             sql += str(mem.id) + ","
-            sql += "%s);"
+            sql += "?);"
         else:
-            sql = "INSERT INTO GUILDIE(G_FAMILY) VALUES(%s);"
+            sql = "INSERT INTO GUILDIE(G_FAMILY) VALUES(?);"
         family = mem.account
         c.execute(sql, [family])
         rowCount = c.rowcount
@@ -173,7 +174,7 @@ class Database(object):
     def removeGuildie(self, mem, operatorID):
         c = self.cursor()
 
-        sql = "UPDATE GUILDIE SET G_CURRENT_MEMBER = FALSE WHERE G_FAMILY = %s;"
+        sql = "UPDATE GUILDIE SET G_CURRENT_MEMBER = 0 WHERE G_FAMILY = ?;"
         c.execute(sql, [mem.account])
         rowCount = c.rowcount
 
@@ -190,17 +191,17 @@ class Database(object):
         sql = 'SELECT * FROM SERVER WHERE SERVER_ID = ' + str(server.id) + ';'
         c.execute(sql)
         if c.rowcount == 0:
-            sql = 'INSERT IGNORE INTO SERVER(SERVER_ID, SERVER_NAME) VALUES (' + str(server.id) + ',%s);'
+            sql = 'INSERT IGNORE INTO SERVER(SERVER_ID, SERVER_NAME) VALUES (' + str(server.id) + ',?);'
             c.execute(sql, [server.name])
 
         # update or add GREETING
         sql = 'SELECT * FROM GREETING WHERE SERVER_ID = ' + str(server.id) + ';'
         c.execute(sql)
         if c.rowcount == 0:
-            sql = 'INSERT IGNORE INTO GREETING(SERVER_ID, MESSAGE) VALUES (' + str(server.id) + ',%s);'
+            sql = 'INSERT IGNORE INTO GREETING(SERVER_ID, MESSAGE) VALUES (' + str(server.id) + ',?);'
             c.execute(sql, [message])
         else:
-            sql = 'UPDATE GREETING SET MESSAGE = %s WHERE SERVER_ID = ' + str(server.id) + ';'
+            sql = 'UPDATE GREETING SET MESSAGE = ? WHERE SERVER_ID = ' + str(server.id) + ';'
             c.execute(sql, [message])
 
         rowCount = c.rowcount
@@ -244,7 +245,7 @@ class Database(object):
                 if result == None and mem.id != None and mem.id != 0:
                     sql = "INSERT IGNORE INTO DISCORD(D_ID, D_NAME, D_DISCRIMINATOR) VALUES("
                     sql += str(mem.id) + ","
-                    sql += "%s,"
+                    sql += "?,"
                     sql += "\"" + mem.discord.split("#")[1] + "\");"
                     dName = mem.shortDiscord
                 print(result[0])
@@ -273,20 +274,20 @@ class Database(object):
         rowCount = 0
         if len(result) == 0:
             # Enter new discord too
-            sql = "INSERT INTO DISCORD VALUES ("
+            sql = "INSERT INTO DISCORD([D_ID], [D_NAME], [D_DISCRIMINATOR]) VALUES ("
             sql += str(mem.id) + ","
-            sql += "%s,"
-            sql += "\"" + mem.discord.split("#")[1] + "\");"
+            sql += "?,"
+            sql += "'" + mem.discord.split("#")[1] + "');"
             dName = mem.shortDiscord
             c.execute(sql, [dName])
             rowCount += c.rowcount
         else:
             # Enter new discord too
-            sql = "UPDATE DISCORD SET D_NAME = %s, D_DISCRIMINATOR = %s WHERE D_ID = " + str(mem.id) + ";"
+            sql = "UPDATE DISCORD SET D_NAME = ?, D_DISCRIMINATOR = ? WHERE D_ID = " + str(mem.id) + ";"
             c.execute(sql, [mem.shortDiscord, mem.discord.split('#')[1]])
             rowCount += c.rowcount
         
-        sql = "UPDATE GUILDIE SET D_ID = " + str(mem.id) + " WHERE G_FAMILY = %s;"
+        sql = "UPDATE GUILDIE SET D_ID = " + str(mem.id) + " WHERE G_FAMILY = ?;"
         family = mem.account
         c.execute(sql, [family])
         rowCount += c.rowcount
@@ -298,21 +299,23 @@ class Database(object):
 
     def documentOperation(self, mem, operatorID, operation):
         c = self.cursor()
-        sql = "INSERT INTO ADD_AND_REMOVE(G_ID, OPERATION, OPERATOR) VALUES ("
-        sql += "(SELECT G_ID FROM GUILDIE WHERE G_FAMILY = \"" + mem.account + "\" LIMIT 1),"
-        sql += "\"" + operation + "\","
+        sql = "INSERT INTO [ADD_AND_REMOVE](G_ID, OPERATION, OPERATOR) VALUES ("
+        sql += "(SELECT TOP 1 G_ID FROM GUILDIE WHERE G_FAMILY = '" + mem.account + "'),"
+        sql += "'" + operation + "',"
         sql += str(operatorID) + ");"
         c.execute(sql)
         c.close()
         self.mydb.commit()
 
     def updateMembers(self):
+        print("updating members")
         c = self.cursor()
-
         c.execute("SELECT D_ID, D_NAME, D_DISCRIMINATOR, G_FAMILY FROM MEMBERS;")
         result = c.fetchall()
         c.close()
+        print('members before: ' + str(len(self.members)))
         self.members = list(Member(x) for x in result)
+        print('members after:  ' + str(len(self.members)))
         
     def updateAlumni(self):
         c = self.cursor()
@@ -328,15 +331,16 @@ class Database(object):
         self.updateAlumni()
 
     def cursor(self):
-        if not self.mydb.is_connected():
-            self.mydb = mysql.connector.connect(
-                host = self.creds['host'],
-                user = self.creds['user'],
-                passwd = self.creds['passwd'],
-                database = self.creds['database'],
-                charset = self.creds['charset']
-                )
-        return self.mydb.cursor(buffered=True)
+        #if not self.mydb.is_connected():
+        #    self.mydb = mysql.connector.connect(
+        #        host = self.creds['host'],
+        #        user = self.creds['user'],
+        #        passwd = self.creds['passwd'],
+        #        database = self.creds['database'],
+        #        charset = self.creds['charset']
+        #        )
+        #return self.mydb.cursor(buffered=True)
+        return self.mydb.cursor()
 
     def executeCommit(self, sql, lst = None, results = False):
         c = self.cursor()
